@@ -15,6 +15,11 @@ entity sdramctl is
 	port (
 		Clk		:  in		std_logic; 
 
+	--A(0)		byte lane
+	--A(1..9)	column address
+	--A(10..22)	row address
+	--A(23..24)	bank address
+
 
 		-- sdram interface
 		sdram_DQ_io			:	inout std_logic_vector(15 downto 0);
@@ -29,17 +34,24 @@ entity sdramctl is
 
 		-- cpu interface
 
-		ctl_busy_o			: 	out	std_logic
+		ctl_stall_o			:	out	std_logic;
+		ctl_cyc_i			:	in		std_logic;
+		ctl_we_i				:	in		std_logic;
+		ctl_A_i				:	in		std_logic_vector(24 downto 0);
+		ctl_D_wr_i			:	in		std_logic_vector(7 downto 0);
+		ctl_D_rd_o			:	out	std_logic_vector(7 downto 0);
+		ctl_ack_o			:	out	std_logic
 	);
 
 end sdramctl;
 
 architecture rtl of sdramctl is
 
-	constant tck : time := 1 sec / CLOCKSPEED;
-	
-	constant trp : time := 15 ns;
-	constant trc : time := 60 ns;
+	constant tck 	: time := 1 sec / CLOCKSPEED;	
+	constant trp 	: time := 15 ns;
+	constant trcd 	: time := 15 ns;
+	constant trc 	: time := 60 ns;
+	constant trfsh	: time := 7.8 us;
 	
 	function CLOCKS(t:time) return integer is
 	variable r:integer;
@@ -52,13 +64,18 @@ architecture rtl of sdramctl is
 	end function;
 
 
-	constant T_RP : natural := CLOCKS(trp);
-	constant T_RC : natural := CLOCKS(trc);
-	constant T_RSC: natural := 2;
-	constant T_CAS: natural := 2;
+	constant T_RP 	: natural := CLOCKS(trp);
+	constant T_RC 	: natural := CLOCKS(trc);
+	constant T_RCD : natural := CLOCKS(trcd);
+	constant T_RSC	: natural := 2;
+	constant T_CAS	: natural := 2;
+	constant T_RFSH: natural := CLOCKS(trfsh);
+	constant T_WR	: natural := 2;
 
+	-- r_powerup_ctr is 1 bit wider and wrap-around indicates finished
 	constant PCTR_MAX : natural := 200*(CLOCKSPEED/1000000);
-	signal r_powerup_ctr : unsigned(numbits(PCTR_MAX) downto 0) := "0" & to_unsigned(PCTR_MAX, numbits(PCTR_MAX));
+	signal r_powerup_ctr : unsigned(numbits(PCTR_MAX) downto 0) 
+										:= "0" & to_unsigned(PCTR_MAX, numbits(PCTR_MAX));
 
 	type t_state_main is (
 		powerup,
@@ -69,7 +86,10 @@ architecture rtl of sdramctl is
 	signal r_state_main 	: 	t_state_main := powerup;
 
 	type t_run_state is (
-		idle
+		idle,
+		refresh,
+		read,
+		write
 	);
 
 	signal r_run_state 	: t_run_state := idle;
@@ -95,11 +115,17 @@ architecture rtl of sdramctl is
 
 	constant MODREG			: std_logic_vector(10 downto 0) := "00000" & std_logic_vector(to_unsigned(T_CAS,2)) & "0000"; --Burst=1, Seq, Cas=3
 
-	signal	r_cmd		: sdram_cmd;
+	signal	r_cmd				: sdram_cmd;
+
+	-- r_rfshctr is 1 bit wider than necessary, wrap around indicates ready
+	signal	r_rfshctr 		: unsigned(numbits(T_RFSH) downto 0);
+
+	signal 	r_A_latched		: std_logic_vector(ctl_A_i'range);
+	signal   r_D_wr_latched	: std_logic_vector(7 downto 0);
 
 begin
 
-	ctl_busy_o		<= '1' when r_state_main /= run else
+	ctl_stall_o		<= '1' when r_state_main /= run else
 							'1' when r_run_state /= idle else
 							'0';
 
@@ -114,12 +140,24 @@ begin
 		begin
 			r_cycle <= (0 => '1', others => '0');
 		end RESET_CYCLE;
+		procedure RESET_RFSH is
+		begin
+			r_rfshctr <= to_unsigned(T_RFSH-1, r_rfshctr'length);
+		end RESET_RFSH;
 	begin
 
-		if falling_edge(clk) then
+		if rising_edge(clk) then
 			r_cycle <= r_cycle(r_cycle'high-1 downto 0) & '0';
 
+			if r_rfshctr(r_rfshctr'high) = '0' then
+				r_rfshctr <= r_rfshctr - 1;
+			end if;
+
 			r_cmd <= cmd_nop;
+			
+			sdram_DQM_o <= (others => '1');
+			sdram_DQ_io <= (others => 'Z');
+			ctl_ack_o <= '0';
 
 			case r_state_main is 
 				when powerup =>
@@ -142,6 +180,7 @@ begin
 						r_cmd <= cmd_autorefresh;
 						sdram_A_o(10) <= '1';
 						sdram_BS_o <= (others => '0');
+						RESET_RFSH;
 					end if;
 					if r_cycle(T_RP + T_RC + T_RC) = '1' then
 						r_cmd <= cmd_setmode;
@@ -153,6 +192,68 @@ begin
 						r_run_state <= idle;
 						RESET_CYCLE;
 					end if;
+				when run =>
+
+					case r_run_state is
+						when idle =>
+							RESET_CYCLE;
+							if ctl_cyc_i = '1' then
+								r_A_latched <= ctl_A_i;
+								r_cmd <= cmd_bankact;
+								sdram_BS_o <= ctl_A_i(24 downto 23);	
+								sdram_A_o  <= ctl_A_i(22 downto 10);
+								if ctl_we_i = '0' then
+									r_run_state <= read;
+								else
+									r_run_state <= write;
+									r_D_wr_latched <= ctl_D_wr_i;								
+									ctl_ack_o <= '1';
+								end if;
+							elsif r_rfshctr(r_rfshctr'high) = '1' then
+								r_cmd <= cmd_autorefresh;
+								sdram_A_o(10) <= '1';
+								sdram_BS_o <= (others => '0');
+								RESET_RFSH;		
+								r_run_state <= refresh;					
+							end if;
+						when read =>
+							if r_cycle(T_RCD) = '1' then
+								r_cmd <= cmd_read;
+								sdram_A_o(8 downto 0) <= r_A_latched(9 downto 1);
+								sdram_A_o(10) <= '1'; -- auto precharge
+								sdram_DQM_o(0) <= '0';
+								sdram_DQM_o(1) <= '0';
+							end if;
+							if r_cycle(T_RCD + T_CAS) = '1' then
+								r_run_state <= idle;
+								ctl_ack_o <= '1';
+								if r_A_latched(0) then
+									ctl_D_rd_o <= sdram_DQ_io(15 downto 8);
+								else
+									ctl_D_rd_o <= sdram_DQ_io(7 downto 0);
+								end if;
+							end if;
+						when write =>
+							if r_cycle(T_RCD-1) = '1' then
+								r_cmd <= cmd_write;
+								sdram_A_o(8 downto 0) <= r_A_latched(9 downto 1);
+								sdram_A_o(10) <= '1'; -- auto precharge
+								sdram_DQ_io <= r_D_wr_latched & r_D_wr_latched;
+								sdram_DQM_o(0) <= r_A_latched(0);
+								sdram_DQM_o(1) <= not r_A_latched(0);
+							end if;
+							if r_cycle(T_RCD + T_WR + T_RP - 2) = '1' then
+								r_run_state <= idle;
+							end if;
+						when refresh =>
+							if r_cycle(T_RP) = '1' then
+								RESET_CYCLE;
+								r_run_state <= idle;
+							end if;
+						when others => 
+
+					end case;
+
 				when others => null;
 
 
@@ -164,7 +265,7 @@ begin
 
 	p_powerup:process(clk)
 	begin
-		if falling_edge(clk) then
+		if rising_edge(clk) then
 			if r_powerup_ctr(r_powerup_ctr'high) = '0' then
 				r_powerup_ctr <= r_powerup_ctr - 1;
 			end if;

@@ -13,6 +13,7 @@ library work;
 entity test_tb is
 	generic (
 		runner_cfg : string;
+		PHASE   : in real := 180.0;							-- degrees of phase lag for clk_p
 		FREQ 	: in integer := 96000000               -- Actual clk frequency, to time 150us initialization delay
 		);
 end test_tb;
@@ -47,7 +48,6 @@ architecture rtl of test_tb is
 	signal i_sdram_DQ			: std_logic_vector(15 downto 0);
 	signal i_sdram_A			: std_logic_vector(12 downto 0); 
 	signal i_sdram_BS			: std_logic_vector(1 downto 0); 
-	signal i_sdram_Clk		: std_logic; 
 	signal i_sdram_CKE		: std_logic;
 	signal i_sdram_nCS		: std_logic;
 	signal i_sdram_nRAS		: std_logic;
@@ -56,6 +56,17 @@ architecture rtl of test_tb is
 	signal i_sdram_DQM		: std_logic_vector(1 downto 0);
 
 	signal i_GSRI				: std_logic;
+
+	signal i_ctl_stall		:	std_logic;
+	signal i_ctl_cyc			:	std_logic;
+	signal i_ctl_we			:	std_logic;
+	signal i_ctl_A				:	std_logic_vector(24 downto 0);
+	signal i_ctl_D_wr			:	std_logic_vector(7 downto 0);
+	signal i_ctl_D_rd			:	std_logic_vector(7 downto 0);
+	signal i_ctl_ack			:	std_logic;
+
+
+	constant t_PER_lag : time := (1000000 us / FREQ) * (PHASE / 360.0);
 
 
 begin
@@ -68,38 +79,138 @@ begin
 		wait for PER2;
 	end process;
 
+	i_clk_p <= transport i_clk after t_PER_lag;
 
 	p_main:process
 	variable v_time:time;
+	variable	test_d	: std_logic_vector(7 downto 0);
 
 	procedure DO_INIT is
 	begin
 
-		wait for 1 us;
+		i_ctl_cyc 	<= '0';
+		i_ctl_we  	<= '0';
+		i_ctl_A		<= (others => '0');
+		i_ctl_D_wr	<= (others => '0');
+
+
+		wait for 10 us;
+
+		wait until i_ctl_stall = '0';
+
+		wait for 2 us;
 
 	end procedure;
 
-	procedure DO_WRITE_BYTE(address : integer; data : integer) is
+
+	procedure DO_READ_BYTE(address : std_logic_vector(24 downto 0); data : out std_logic_vector(7 downto 0)) is
+	variable v_iter : natural := 0;
+	begin
+		
+		wait for 1 us;
+
+		wait until rising_edge(i_clk);
+
+		wait for 0 ns;
+
+		i_ctl_cyc 	<= '1';
+		i_ctl_we  	<= '0';
+		i_ctl_A		<= address;
+		i_ctl_D_wr	<= (others => '-');
+
+		wait until rising_edge(i_clk);
+
+		v_iter := 0;
+		while i_ctl_stall /= '0' loop
+			wait until rising_edge(i_clk);
+			v_iter := v_iter + 1;
+			if v_iter > 1000 then
+				report "Failed waiting for stall" severity error;
+			end if;
+		end loop;
+
+
+		wait until rising_edge(i_clk);
+		-- wait for ack
+
+		i_ctl_cyc 	<= '0';
+
+		v_iter := 0;
+		while i_ctl_ack /= '1' loop
+			wait until rising_edge(i_clk);
+			v_iter := v_iter + 1;
+			if v_iter > 1000 then
+				report "Failed waiting for ack" severity error;
+			end if;
+		end loop;
+
+		data := i_ctl_D_rd;
+		
+		report "read address " & to_hstring(unsigned(address)) & " returned " & to_hstring(unsigned(data)) severity note;
+		
+		wait until rising_edge(i_clk);
+
+
+	end procedure;
+
+	procedure DO_WRITE_BYTE(address : std_logic_vector(24 downto 0); data : std_logic_vector(7 downto 0)) is
+	variable v_iter : natural := 0;
 	begin
 		
 
-		wait for 1 us;
+		wait until rising_edge(i_clk);
+
+		wait for 1 ns;
+
+		i_ctl_cyc 	<= '1';
+		i_ctl_we  	<= '1';
+		i_ctl_A		<= address;
+		i_ctl_D_wr	<= data;
+
+		wait until rising_edge(i_clk);
+
+
+		v_iter := 0;
+		while i_ctl_stall /= '0' loop
+			wait until rising_edge(i_clk);
+			v_iter := v_iter + 1;
+			if v_iter > 1000 then
+				report "Failed waiting for stall" severity error;
+			end if;
+		end loop;
+
+		wait for 1 ns;
+
+		-- wait for ack
+
+		i_ctl_cyc 	<= '0';
+
+		v_iter := 0;
+		while i_ctl_ack /= '1' loop
+			wait until rising_edge(i_clk);
+			v_iter := v_iter + 1;
+			if v_iter > 1000 then
+				report "Failed waiting for ack" severity error;
+			end if;
+		end loop;
+
+
 
 	end procedure;
 
-	procedure DO_READ_BYTE(address : integer; data : out integer) is
-	begin
-		
-		wait for 1 us;
 
-	end procedure;
 
-	procedure DO_READ_BYTE_C(address : integer; expect_data : integer) is
-	variable D:integer;
+	procedure DO_READ_BYTE_C(address : std_logic_vector(24 downto 0); expect_data : std_logic_vector(7 downto 0)) is
+	variable D:std_logic_vector(7 downto 0);
 	begin
 		DO_READ_BYTE(address, D);
-		assert D = expect_data report "read address " & to_hstring(to_unsigned(address, 21)) & " returned " & to_hstring(to_unsigned(D, 8)) & " expected " & to_hstring(to_unsigned(expect_data, 8));
+		assert D = expect_data report "read address " & to_hstring(unsigned(address)) & " returned " & to_hstring(unsigned(D)) & " expected " & to_hstring(unsigned(expect_data));
 	end procedure;
+
+	FUNCTION ADDR(a:integer) return std_logic_vector is
+	begin
+		return std_logic_vector(to_unsigned(a, 25));
+	end function ADDR;
 
 
 	begin
@@ -112,6 +223,18 @@ begin
 			if run("write then read") then
 
 				DO_INIT;
+
+				DO_WRITE_BYTE(ADDR(16#12345#), x"23");
+				DO_WRITE_BYTE(ADDR(16#12346#), x"45");
+				DO_WRITE_BYTE(ADDR(16#12347#), x"BE");
+				DO_WRITE_BYTE(ADDR(16#12348#), x"EF");
+
+				wait for 1 us;
+
+				DO_READ_BYTE(ADDR(16#12345#), test_d);				
+				DO_READ_BYTE(ADDR(16#12346#), test_d);
+				DO_READ_BYTE(ADDR(16#12347#), test_d);
+				DO_READ_BYTE(ADDR(16#12348#), test_d);
 
 				wait for 250 us;
 			end if;
@@ -128,7 +251,7 @@ begin
 		CLOCKSPEED => FREQ
 		)
 	port map (
-		Clk		=> i_sdram_Clk,
+		Clk				=> i_clk,
 
 		sdram_DQ_io		=> i_sdram_DQ,
 		sdram_A_o		=> i_sdram_A,
@@ -138,19 +261,26 @@ begin
 		sdram_nRAS_o	=> i_sdram_nRAS,
 		sdram_nCAS_o	=> i_sdram_nCAS,
 		sdram_nWE_o		=> i_sdram_nWE,
-		sdram_DQM_o		=> i_sdram_DQM
+		sdram_DQM_o		=> i_sdram_DQM,
+
+		ctl_stall_o		=> i_ctl_stall,
+		ctl_cyc_i		=> i_ctl_cyc,
+		ctl_we_i			=> i_ctl_we,
+		ctl_A_i			=> i_ctl_A,
+		ctl_D_wr_i		=> i_ctl_D_wr,
+		ctl_D_rd_o		=> i_ctl_D_rd,
+		ctl_ack_o		=> i_ctl_ack
     );
 
 
 
-	i_sdram_Clk <= i_clk;
 
 	e_sdram:entity work.W9825G6KH
 	port map (
 		Dq			=> i_sdram_DQ,
 		Addr		=> i_sdram_A,
 		Bs			=> i_sdram_BS,
-		Clk		=> i_sdram_Clk,
+		Clk		=> i_clk_p,
 		Cke		=> i_sdram_CKE,
 		Cs_n		=> i_sdram_nCS,
 		Ras_n		=> i_sdram_nRAS,
