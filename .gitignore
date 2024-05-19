@@ -1,0 +1,6 @@
+**/impl/
+*.user
+*.sublime-*
+*.bak
+**/vunit_out/
+library/3rdparty/*/
