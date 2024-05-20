@@ -34,6 +34,8 @@ entity sdramctl is
 
 		-- cpu interface
 
+		ctl_rfsh_i			:	in		std_logic;
+
 		ctl_stall_o			:	out	std_logic;
 		ctl_cyc_i			:	in		std_logic;
 		ctl_we_i				:	in		std_logic;
@@ -209,7 +211,7 @@ begin
 									r_D_wr_latched <= ctl_D_wr_i;								
 									ctl_ack_o <= '1';
 								end if;
-							elsif r_rfshctr(r_rfshctr'high) = '1' then
+							elsif r_rfshctr(r_rfshctr'high) = '1' and ctl_rfsh_i = '1' then
 								r_cmd <= cmd_autorefresh;
 								sdram_A_o(10) <= '1';
 								sdram_BS_o <= (others => '0');

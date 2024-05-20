@@ -13,7 +13,7 @@ library work;
 entity test_tb is
 	generic (
 		runner_cfg : string;
-		PHASE   : in real := 180.0;							-- degrees of phase lag for clk_p
+		PHASE   : in real := 90.0;							-- degrees of phase lag for clk_p
 		FREQ 	: in integer := 96000000               -- Actual clk frequency, to time 150us initialization delay
 		);
 end test_tb;
@@ -64,6 +64,7 @@ architecture rtl of test_tb is
 	signal i_ctl_D_wr			:	std_logic_vector(7 downto 0);
 	signal i_ctl_D_rd			:	std_logic_vector(7 downto 0);
 	signal i_ctl_ack			:	std_logic;
+	signal i_ctl_rfsh			:  std_logic;
 
 
 	constant t_PER_lag : time := (1000000 us / FREQ) * (PHASE / 360.0);
@@ -84,6 +85,7 @@ begin
 	p_main:process
 	variable v_time:time;
 	variable	test_d	: std_logic_vector(7 downto 0);
+	variable I:integer;
 
 	procedure DO_INIT is
 	begin
@@ -106,8 +108,6 @@ begin
 	procedure DO_READ_BYTE(address : std_logic_vector(24 downto 0); data : out std_logic_vector(7 downto 0)) is
 	variable v_iter : natural := 0;
 	begin
-		
-		wait for 1 us;
 
 		wait until rising_edge(i_clk);
 
@@ -224,6 +224,8 @@ begin
 
 				DO_INIT;
 
+				i_ctl_rfsh	 <= '1';
+
 				DO_WRITE_BYTE(ADDR(16#12345#), x"23");
 				DO_WRITE_BYTE(ADDR(16#12346#), x"45");
 				DO_WRITE_BYTE(ADDR(16#12347#), x"BE");
@@ -231,12 +233,29 @@ begin
 
 				wait for 1 us;
 
-				DO_READ_BYTE(ADDR(16#12345#), test_d);				
-				DO_READ_BYTE(ADDR(16#12346#), test_d);
-				DO_READ_BYTE(ADDR(16#12347#), test_d);
-				DO_READ_BYTE(ADDR(16#12348#), test_d);
+				DO_READ_BYTE_C(ADDR(16#12345#), x"23");				
+				DO_READ_BYTE_C(ADDR(16#12346#), x"45");
+				DO_READ_BYTE_C(ADDR(16#12347#), x"BE");
+				DO_READ_BYTE_C(ADDR(16#12348#), x"EF");
 
-				wait for 250 us;
+				wait for 1 us;
+			elsif run("multibank") then
+
+				DO_INIT;
+
+				i_ctl_rfsh	 <= '1';
+
+				FOR I in 0 TO 255 loop
+					DO_WRITE_BYTE(ADDR(I * 16#20000#), std_logic_vector(to_unsigned(I,8)));
+				END LOOP;
+
+				wait for 1 us;
+
+				FOR I in 0 TO 255 loop
+					DO_READ_BYTE_C(ADDR(I * 16#20000#), std_logic_vector(to_unsigned(I,8)));
+				END LOOP;
+
+				wait for 1 us;
 			end if;
 
 		end loop;
@@ -263,6 +282,7 @@ begin
 		sdram_nWE_o		=> i_sdram_nWE,
 		sdram_DQM_o		=> i_sdram_DQM,
 
+		ctl_rfsh_i		=> i_ctl_rfsh,
 		ctl_stall_o		=> i_ctl_stall,
 		ctl_cyc_i		=> i_ctl_cyc,
 		ctl_we_i			=> i_ctl_we,

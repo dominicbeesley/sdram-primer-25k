@@ -19,9 +19,9 @@ lib.add_source_files("../library/3rdparty/winbond/W9825G6KH/W9825G6KH.modelsim.v
 tb = lib.test_bench("test_tb")
 
 
-cfg = tb.add_config("latency_4_cs_delay", generics=dict( \
-	FREQ = 64000000
-	))
+#cfg = tb.add_config("latency_4_cs_delay", generics=dict( \
+#	FREQ = 64000000
+#	))
 
 
 # Run vunit function
