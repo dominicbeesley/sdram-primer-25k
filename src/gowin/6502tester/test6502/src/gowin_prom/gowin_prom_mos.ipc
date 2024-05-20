@@ -1,0 +1,14 @@
+[General]
+ipc_version=4
+file=gowin_prom_mos
+module=Gowin_pROM_mos
+target_device=gw5a25a-002
+type=ram_prom
+version=1.0
+
+[Config]
+DEPTH=4096
+LANG=1
+READ=0
+RESET_MODE=true
+WIDTH=8
