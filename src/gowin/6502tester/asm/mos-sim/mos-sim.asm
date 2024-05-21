@@ -23,6 +23,8 @@ reset:		sei
 		cmp	#2
 		bne	bad
 
+		jsr	pig
+
 
 
 @lp3:		ldx	#0
@@ -40,6 +42,9 @@ str:		.byte	"This is a test",13,10,0
 
 bad:		jmp	bad
 
+
+pig:		jsr	poke
+poke:		rts
 
 irq:
 nmi:

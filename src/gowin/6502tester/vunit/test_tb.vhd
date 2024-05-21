@@ -67,6 +67,7 @@ begin
 	generic map (
 		SIM => TRUE,
 		ROMFILE => "../../../asm/build/mos-sim/mos-sim.mi"
+--		ROMFILE => "../../../asm/build/mos/mos.mi"
 	)
 	port map (
 		clk_50_i		=> i_clk,
