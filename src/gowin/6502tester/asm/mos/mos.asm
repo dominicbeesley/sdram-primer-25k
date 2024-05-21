@@ -10,8 +10,10 @@ reset:		sei
 		ldx	#$FF
 		txs
 
-		lda	#0
-		tay
+@lp3:		lda	#$FF
+		ldy	#0
+
+
 @lp2:		ldx	#200
 @lp:		dey
 		bne	@lp
@@ -19,9 +21,15 @@ reset:		sei
 		bne	@lp
 		clc
 		adc	#1
+		tax
+		lda	str,X
+		beq	@lp3		
 		sta	HW_DEBUG
+		txa
 		jmp	@lp2
 
+
+str:		.byte	"This is a test",13,10,0
 
 
 irq:

@@ -53,7 +53,7 @@ begin
 		while test_suite loop
 
 			if run("test") then
-				wait for 100 us;
+				wait for 1000 us;
 			end if;
 
 		end loop;

@@ -136,6 +136,25 @@ begin
 	end process;
 
 
+	e_fb_uart:entity work.fb_uart
+	generic map (
+		SIM			=> SIM,
+		CLOCKSPEED	=> CLOCKSPEED,
+		BAUDRATE		=> 19200
+	)
+	port map (
+
+		-- fishbone signals
+		fb_syscon_i	=> i_fbsyscon,
+		fb_c2p_i		=> i_fb_cpu_c2p,
+		fb_p2c_o		=>	open,
+
+		-- serial
+		tx_o			=> uart_tx_o
+	);
+
+
+
 	p_debug_leds:process(clk_50_i)
 	variable v_clock_div : unsigned(19 downto 0);
 	variable v_sel	: boolean;
