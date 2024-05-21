@@ -80,7 +80,7 @@ architecture rtl of fb_65c02 is
 	type t_state is (phi1, phi1_2, phi1_3, phi2);
 
 	signal	r_state			:	t_state := phi1;
-	signal   r_had_ack		:  std_logic;
+	signal  	r_had_ack		:  std_logic;
 
 begin
 

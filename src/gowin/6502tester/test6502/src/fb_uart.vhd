@@ -86,7 +86,7 @@ begin
 
 	fb_p2c_o.rdy <= '1';
 	fb_p2c_o.stall <= '0';
-	fb_p2c_o.D_rd <= (others => '1');
+	fb_p2c_o.D_rd <= (7 => r_req xor r_ack, others => '1');
 
 	p_fb:process(fb_syscon_i)
 	variable v_we : std_logic;
