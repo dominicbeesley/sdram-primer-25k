@@ -51,6 +51,8 @@ architecture rtl of top is
 
 	signal	r_mos_rom	:	t_rom_type := init_ram_hex(MOS_SIZE);
 
+	signal	r_ram			:	t_rom_type;
+
 	signal	x				:	unsigned(27 downto 0) := (others => '0');
 
 
@@ -62,7 +64,7 @@ architecture rtl of top is
 
 	signal	i_debug_state		: std_logic_vector(2 downto 0);
 
-	constant C_PERIPHERAL_COUNT 	:	natural := 3;
+	constant C_PERIPHERAL_COUNT 	:	natural := 4;
 	signal   i_fb_per_c2p			:	fb_con_o_per_i_arr(C_PERIPHERAL_COUNT-1 downto 0);
 	signal   i_fb_per_p2c			:	fb_con_i_per_o_arr(C_PERIPHERAL_COUNT-1 downto 0);
 	constant C_PER_MOS				:	natural := 0;
@@ -74,6 +76,9 @@ architecture rtl of top is
 	constant C_PER_UART				:	natural := 2;
 	signal 	i_fb_uart_c2p			:	fb_con_o_per_i_t;
 	signal 	i_fb_uart_p2c			:	fb_con_i_per_o_t;
+	constant C_PER_RAM				:	natural := 3;
+	signal 	i_fb_ram_c2p			:	fb_con_o_per_i_t;
+	signal 	i_fb_ram_p2c			:	fb_con_i_per_o_t;
 
 	signal	i_cpu_sel_addr			:	std_logic_vector(15 downto 0);
 	signal	i_cpu_sel				:	unsigned(numbits(C_PERIPHERAL_COUNT)-1 downto 0);
@@ -99,6 +104,36 @@ begin
 	end process;
 	i_fb_mos_p2c.stall <= '0';
 	i_fb_mos_p2c.rdy <= '1';
+
+	p_ram:process(i_fbsyscon)
+	variable v_we : std_logic;
+	variable v_we_addr : std_logic_vector(11 downto 0);
+	variable v_cyc: std_logic;
+	begin
+		if i_fbsyscon.rst = '1' then
+			v_we := '0';
+			v_cyc:= '0';		
+		elsif rising_edge(i_fbsyscon.clk) then
+
+			if i_fb_ram_c2p.cyc = '0' then
+				v_we := '0';
+				v_cyc:= '0';
+			elsif i_fb_ram_c2p.cyc = '1' and i_fb_ram_c2p.a_stb = '1' then
+				v_cyc:= '1';
+				v_we := i_fb_ram_c2p.we;
+				v_we_addr := i_fb_ram_c2p.A(11 downto 0);
+			end if;
+
+			i_fb_ram_p2c.D_rd <= r_ram(to_integer(unsigned(v_we_addr)));
+			i_fb_ram_p2c.ack <= v_cyc and (not v_we or i_fb_ram_c2p.D_wr_stb);
+			if v_cyc = '1' and v_we = '1' and i_fb_ram_c2p.D_wr_stb = '1' then
+				r_ram(to_integer(unsigned(v_we_addr))) <= i_fb_ram_c2p.D_wr;
+			end if;
+		end if;
+	end process;
+	i_fb_ram_p2c.stall <= '0';
+	i_fb_ram_p2c.rdy <= '1';
+
 	
 	e_fb_sycon:entity work.fb_syscon
 		generic map(
@@ -141,17 +176,20 @@ begin
 	i_fb_per_p2c(C_PER_MOS) 	<= i_fb_mos_p2c;
 	i_fb_per_p2c(C_PER_LED7) 	<= i_fb_led7_p2c;
 	i_fb_per_p2c(C_PER_UART) 	<= i_fb_uart_p2c;
+	i_fb_per_p2c(C_PER_RAM) 	<= i_fb_ram_p2c;
 
 	i_fb_mos_c2p					<= i_fb_per_c2p(C_PER_MOS);
 	i_fb_led7_c2p					<= i_fb_per_c2p(C_PER_LED7);
 	i_fb_uart_c2p					<= i_fb_per_c2p(C_PER_UART);
+	i_fb_ram_c2p					<= i_fb_per_c2p(C_PER_RAM);
 
 	p_sel:process(i_cpu_sel_addr)
 	variable I:integer;
 	begin
 		I	:=	C_PER_UART when i_cpu_sel_addr(15 downto 12) = x"D" else
 				C_PER_LED7 when i_cpu_sel_addr(15 downto 12) = x"E" else
-				C_PER_MOS;
+				C_PER_MOS  when i_cpu_sel_addr(15 downto 12) = x"F" else
+				C_PER_RAM;
 
 		i_cpu_sel <= to_unsigned(I, i_cpu_sel'length);
 				
