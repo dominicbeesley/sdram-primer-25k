@@ -23,7 +23,8 @@ entity top is
 		led7_bits			: out		std_logic_vector(6 downto 0);
 		led7_sel				: out		std_logic;
 
-		dummy					: out		std_logic_vector(7 downto 0)
+		leds_o				: out		std_logic_vector(7 downto 0)
+
 
 	);
 end top;
@@ -85,8 +86,6 @@ architecture rtl of top is
 	signal	i_cpu_sel_oh			:	std_logic_vector(C_PERIPHERAL_COUNT-1 downto 0);
 
 begin
-
-	dummy <= i_fb_cpu_c2p.A(7 downto 0);
 
 	p_chk:process(clk_50_i)
 	begin
@@ -314,5 +313,7 @@ begin
 
 		end if;
 	end process;
+
+	leds_o <= not (i_debug_state & "1" & rst_i & i_fbsyscon.rst & "10");
 
 end rtl;

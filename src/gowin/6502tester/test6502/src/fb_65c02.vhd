@@ -81,6 +81,7 @@ architecture rtl of fb_65c02 is
 
 	signal	r_state			:	t_state := phi1;
 	signal  	r_had_ack		:  std_logic;
+	signal	r_rst				:  std_logic;
 
 begin
 
@@ -94,8 +95,10 @@ begin
 	variable p_rst : std_logic := '0';
 	begin
 		if rising_edge(fb_syscon_i.clk) then
-			if p_rst = '0' and fb_syscon_i.rst = '1' then
-				r_state <= phi1;
+			if p_rst /= '1' and fb_syscon_i.rst = '1' then
+				r_state <= phi1_2;
+				fb_c2p_o <= fb_c2p_unsel;
+				r_rst <= '1';
 			else
 
 				i_cpu_cken <= '0';
@@ -103,6 +106,7 @@ begin
 				case r_state is 
 					when phi1 => 
 						r_state <= phi1_2;
+						r_rst <= fb_syscon_i.rst;
 					when phi1_2 =>
 						fb_c2p_o <= (
 							cyc => '1',
@@ -115,7 +119,7 @@ begin
 							);
 						r_state <= phi1_3;
 					when phi1_3 => 
-						if fb_p2c_i.stall = '0' or fb_syscon_i.rst = '1' then
+						if fb_p2c_i.stall = '0' or r_rst = '1' then
 							fb_c2p_o.a_stb <= '0';
 							r_state <= phi2;
 							r_had_ack <= fb_p2c_i.ack;
@@ -128,7 +132,7 @@ begin
 							i_cpu_cken <= '1';
 							fb_c2p_o.cyc <= '0';
 							r_state <= phi1;
-						elsif fb_p2c_i.ack = '1' or fb_syscon_i.rst = '1' then
+						elsif fb_p2c_i.ack = '1' or r_rst = '1' then
 							i_cpu_D_i <= unsigned(fb_p2c_i.D_rd);
 							i_cpu_cken <= '1';
 							fb_c2p_o.cyc <= '0';
@@ -147,7 +151,7 @@ begin
 
 	e_cpu:entity work.R65C02
 	port map (
-        reset    => not fb_syscon_i.rst,
+        reset    => not r_rst,
         clk      => fb_syscon_i.clk,
         enable   => i_cpu_cken,
         nmi_n    => nmi_n_i,
