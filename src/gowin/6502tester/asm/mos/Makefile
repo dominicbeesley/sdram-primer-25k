@@ -18,4 +18,4 @@ $(BUILD)/%.bin:	$(BUILD)/%.o %.lnk.cfg
 	ld65 -C $(basename $(notdir $@)).lnk.cfg -o $@ $<
 
 $(BUILD)/%.o: %.asm
-	ca65 -o $@ $<
+	ca65 -l $(basename $@).lst -o $@ $<

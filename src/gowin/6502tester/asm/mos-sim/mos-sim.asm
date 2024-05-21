@@ -12,6 +12,19 @@ reset:		sei
 		ldx	#$FF
 		txs
 
+		lda	#2
+		pha
+		lda	#1
+		pha
+		pla
+		cmp	#1
+		bne	bad
+		pla
+		cmp	#2
+		bne	bad
+
+
+
 @lp3:		ldx	#0
 @lp2:		stx	HW_DEBUG
 		lda	str,X
@@ -24,6 +37,8 @@ reset:		sei
 
 
 str:		.byte	"This is a test",13,10,0
+
+bad:		jmp	bad
 
 
 irq:
