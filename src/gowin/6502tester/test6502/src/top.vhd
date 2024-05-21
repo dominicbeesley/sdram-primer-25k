@@ -5,6 +5,7 @@ use ieee.std_logic_misc.all;
 use std.textio.all;
 
 library work;
+use work.common.all;
 use work.fishbone.all;
 
 entity top is
@@ -60,6 +61,24 @@ architecture rtl of top is
 	signal 	i_fb_cpu_p2c		:	fb_con_i_per_o_t;
 
 	signal	i_debug_state		: std_logic_vector(2 downto 0);
+
+	constant C_PERIPHERAL_COUNT 	:	natural := 3;
+	signal   i_fb_per_c2p			:	fb_con_o_per_i_arr(C_PERIPHERAL_COUNT-1 downto 0);
+	signal   i_fb_per_p2c			:	fb_con_i_per_o_arr(C_PERIPHERAL_COUNT-1 downto 0);
+	constant C_PER_MOS				:	natural := 0;
+	signal 	i_fb_mos_c2p			:	fb_con_o_per_i_t;
+	signal 	i_fb_mos_p2c			:	fb_con_i_per_o_t;
+	constant C_PER_LED7				:	natural := 1;
+	signal 	i_fb_led7_c2p			:	fb_con_o_per_i_t;
+	signal 	i_fb_led7_p2c			:	fb_con_i_per_o_t;
+	constant C_PER_UART				:	natural := 2;
+	signal 	i_fb_uart_c2p			:	fb_con_o_per_i_t;
+	signal 	i_fb_uart_p2c			:	fb_con_i_per_o_t;
+
+	signal	i_cpu_sel_addr			:	std_logic_vector(15 downto 0);
+	signal	i_cpu_sel				:	unsigned(numbits(C_PERIPHERAL_COUNT)-1 downto 0);
+	signal	i_cpu_sel_oh			:	std_logic_vector(C_PERIPHERAL_COUNT-1 downto 0);
+
 begin
 
 	dummy <= i_fb_cpu_c2p.A(7 downto 0);
@@ -71,17 +90,15 @@ begin
 		end if;
 	end process;
 
-	i_fb_cpu_p2c.stall <= '0';
-	i_fb_cpu_p2c.rdy <= '1';
-
 	p_rom:process(i_fbsyscon)
 	begin
 		if rising_edge(i_fbsyscon.clk) then
-			i_fb_cpu_p2c.D_rd <= r_mos_rom(to_integer(unsigned(i_fb_cpu_c2p.A(11 downto 0))));
-			i_fb_cpu_p2c.ack <= i_fb_cpu_c2p.cyc and i_fb_cpu_c2p.a_stb;
+			i_fb_mos_p2c.D_rd <= r_mos_rom(to_integer(unsigned(i_fb_mos_c2p.A(11 downto 0))));
+			i_fb_mos_p2c.ack <= i_fb_cpu_c2p.cyc and i_fb_mos_c2p.a_stb;
 		end if;
 	end process;
-
+	i_fb_mos_p2c.stall <= '0';
+	i_fb_mos_p2c.rdy <= '1';
 	
 	e_fb_sycon:entity work.fb_syscon
 		generic map(
@@ -96,6 +113,53 @@ begin
 		fb_syscon_o			=> i_fbsyscon
 	);
 	
+	e_fb_mux:entity work.fb_intcon_one_to_many
+	generic map(
+		SIM					=> SIM,
+		G_PERIPHERAL_COUNT	=> C_PERIPHERAL_COUNT,
+		G_ADDRESS_WIDTH		=> 16
+	)
+	port map (
+
+		fb_syscon_i			=> i_fbsyscon,
+
+		-- peripheral port connect to controllers
+		fb_con_c2p_i		=> i_fb_cpu_c2p,
+		fb_con_p2c_o		=> i_fb_cpu_p2c,
+
+		-- controller port connecto to peripherals
+		fb_per_c2p_o		=> i_fb_per_c2p,
+		fb_per_p2c_i		=> i_fb_per_p2c,
+
+		-- peripheral select interface -- note, testing shows that having both one hot and index is faster _and_ uses fewer resources
+		peripheral_sel_addr_o		=> i_cpu_sel_addr,
+		peripheral_sel_i				=> i_cpu_sel,
+		peripheral_sel_oh_i			=> i_cpu_sel_oh
+
+	);
+
+	i_fb_per_p2c(C_PER_MOS) 	<= i_fb_mos_p2c;
+	i_fb_per_p2c(C_PER_LED7) 	<= i_fb_led7_p2c;
+	i_fb_per_p2c(C_PER_UART) 	<= i_fb_uart_p2c;
+
+	i_fb_mos_c2p					<= i_fb_per_c2p(C_PER_MOS);
+	i_fb_led7_c2p					<= i_fb_per_c2p(C_PER_LED7);
+	i_fb_uart_c2p					<= i_fb_per_c2p(C_PER_UART);
+
+	p_sel:process(i_cpu_sel_addr)
+	variable I:integer;
+	begin
+		I	:=	C_PER_UART when i_cpu_sel_addr(15 downto 12) = x"D" else
+				C_PER_LED7 when i_cpu_sel_addr(15 downto 12) = x"E" else
+				C_PER_MOS;
+
+		i_cpu_sel <= to_unsigned(I, i_cpu_sel'length);
+				
+		i_cpu_sel_oh <= (others => '0');
+		i_cpu_sel_oh(I) <= '1';
+	end process;
+
+
 	e_cpu:entity work.fb_65c02
 	generic map (
 		SIM			=> SIM,
@@ -116,11 +180,15 @@ begin
 	);
 
 	
+	i_fb_led7_p2c.stall <= '0';
+	i_fb_led7_p2c.rdy <= '1';
+	i_fb_led7_p2c.ack <= '1';
+	i_fb_led7_p2c.D_rd <= (others => '1');
 	
 	p_debug_lat:process(i_fbsyscon)
 	begin
 		 	if rising_edge(i_fbsyscon.clk) then
-				if i_fb_cpu_c2p.d_wr_stb = '1' and i_fb_cpu_c2p.cyc = '1' and i_fb_cpu_c2p.we = '1' then
+				if i_fb_led7_c2p.d_wr_stb = '1' and i_fb_led7_c2p.cyc = '1' and i_fb_led7_c2p.we = '1' then
 					r_debug_val <= i_fb_cpu_c2p.d_wr;
 				end if;			
 --				r_debug_val <= i_fb_cpu_c2p.A(7 downto 0);
@@ -146,8 +214,8 @@ begin
 
 		-- fishbone signals
 		fb_syscon_i	=> i_fbsyscon,
-		fb_c2p_i		=> i_fb_cpu_c2p,
-		fb_p2c_o		=>	open,
+		fb_c2p_i		=> i_fb_uart_c2p,
+		fb_p2c_o		=>	i_fb_uart_p2c,
 
 		-- serial
 		tx_o			=> uart_tx_o

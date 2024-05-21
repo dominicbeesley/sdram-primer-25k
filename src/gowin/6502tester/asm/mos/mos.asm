@@ -1,4 +1,5 @@
 
+HW_UART_DAT	:=	$D000		; 2xLED 7 segment display
 HW_DEBUG		:=	$E000		; 2xLED 7 segment display
 
 
@@ -22,9 +23,10 @@ reset:		sei
 		clc
 		adc	#1
 		tax
+		sta	HW_DEBUG
 		lda	str,X
 		beq	@lp3		
-		sta	HW_DEBUG
+		sta	HW_UART_DAT
 		txa
 		jmp	@lp2
 
