@@ -4,3 +4,4 @@
 *.bak
 **/vunit_out/
 library/3rdparty/*/
+**/asm/build/
