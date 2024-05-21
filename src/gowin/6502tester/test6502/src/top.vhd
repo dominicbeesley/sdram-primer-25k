@@ -10,7 +10,7 @@ use work.fishbone.all;
 
 entity top is
 	generic(
-		ROMFILE				: string := "C:\\Users\\Dominic\\Documents\\GitHub\\sdram-primer-25k\\src\\gowin\\6502tester\\asm\\build\\mos\\mos.mi";
+		ROMFILE				: string := "../asm/build/mos/mos.mi";
 		SIM					: boolean := FALSE;
 		CLOCKSPEED			: natural := 50
 		);

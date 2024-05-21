@@ -65,7 +65,8 @@ begin
 
 	e_top:entity work.top
 	generic map (
-		SIM => TRUE
+		SIM => TRUE,
+		ROMFILE => "../../../asm/build/mos-sim/mos-sim.mi"
 	)
 	port map (
 		clk_50_i		=> i_clk,
