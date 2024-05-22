@@ -144,7 +144,9 @@ begin
 					end if;
 					r_prerun_shift <= ( others => '0');
 				when reset =>
-					if rr_EXT_nRESET = '0' then
+					if clk_lock_i = '0' then
+						r_rst_counter <= (others => '0');
+					elsif rr_EXT_nRESET = '0' then
 						r_rst_counter <= r_rst_counter + 1;
 						if r_rst_counter = to_unsigned(RST_COUNT_FULL, RST_CTR_LEN) then
 							r_rst_state <= resetfull;

@@ -31,7 +31,21 @@ end top;
 
 architecture rtl of top is
 
-	signal	i_cpu_clk	:	std_logic;
+	component pll1
+	    port (
+	        lock: out std_logic;
+	        clkout0: out std_logic;
+	        clkout1: out std_logic;
+	        clkin: in std_logic;
+	        pssel: in std_logic_vector(2 downto 0);
+	        psdir: in std_logic;
+	        pspulse: in std_logic
+	    );
+	end component;
+
+	signal   i_lock_pll	: std_logic;
+	signal   i_clk_pll	: std_logic;
+	signal   i_clk_pll_p	: std_logic;
 
 	constant MOS_SIZE : natural := 4096;
 
@@ -142,7 +156,7 @@ begin
 	port map(
 		EXT_nRESET_i		=> not rst_i,
 		clk_fish_i			=> clk_50_i,
-		clk_lock_i			=> '1',
+		clk_lock_i			=> i_lock_pll,
 		sys_dll_lock_i		=> '1',
 		fb_syscon_o			=> i_fbsyscon
 	);
@@ -315,5 +329,17 @@ begin
 	end process;
 
 	leds_o <= not (i_debug_state & "1" & rst_i & i_fbsyscon.rst & "10");
+
+	your_instance_name: pll1
+   port map (
+   	lock => i_lock_pll,
+   	clkout0 => i_clk_pll,
+   	clkout1 => i_clk_pll_p,
+   	clkin => clk_50_i,
+   	pssel => "001",
+   	psdir => '1',
+   	pspulse => '0'
+	);
+
 
 end rtl;

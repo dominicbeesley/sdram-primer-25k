@@ -28,6 +28,15 @@ architecture rtl of test_tb is
 
 begin
 
+   p_gsri:process
+   begin
+      i_GSRI <= '0';
+      wait for 1 us;
+      i_GSRI <= '1';
+      wait;
+   end process;
+
+
 	p_rst:process
 	begin
 		wait for 1 ns;
@@ -76,9 +85,9 @@ begin
 	);
 
 
---	GSR: entity work.GSR
---	port map (
---		GSRI => i_GSRI
---		);
+	GSR: entity work.GSR
+	port map (
+		GSRI => i_GSRI
+		);
 
 end rtl;
