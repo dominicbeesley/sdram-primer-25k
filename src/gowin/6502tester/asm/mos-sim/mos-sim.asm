@@ -1,4 +1,5 @@
 
+HW_PORTA		:=	$C000		; control port
 HW_UART_DAT	:=	$D000		; UART DATA
 HW_UART_STAT	:=	$D001		; UART STATUS
 HW_DEBUG		:=	$E000		; 2xLED 7 segment display
@@ -24,6 +25,15 @@ reset:		sei
 		bne	bad
 
 		jsr	pig
+
+; twiddle pll phase test
+		ldx	#0
+		ldy	#$01
+		lda	#$00
+@plp1:		sty	HW_PORTA
+		sta	HW_PORTA
+		inx
+		bne	@plp1
 
 
 

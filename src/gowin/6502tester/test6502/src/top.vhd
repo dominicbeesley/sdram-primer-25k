@@ -79,7 +79,7 @@ architecture rtl of top is
 
 	signal	i_debug_state		: std_logic_vector(2 downto 0);
 
-	constant C_PERIPHERAL_COUNT 	:	natural := 4;
+	constant C_PERIPHERAL_COUNT 	:	natural := 5;
 	signal   i_fb_per_c2p			:	fb_con_o_per_i_arr(C_PERIPHERAL_COUNT-1 downto 0);
 	signal   i_fb_per_p2c			:	fb_con_i_per_o_arr(C_PERIPHERAL_COUNT-1 downto 0);
 	constant C_PER_MOS				:	natural := 0;
@@ -94,10 +94,15 @@ architecture rtl of top is
 	constant C_PER_RAM				:	natural := 3;
 	signal 	i_fb_ram_c2p			:	fb_con_o_per_i_t;
 	signal 	i_fb_ram_p2c			:	fb_con_i_per_o_t;
+	constant C_PER_PORTA				:	natural := 4;
+	signal 	i_fb_porta_c2p			:	fb_con_o_per_i_t;
+	signal 	i_fb_porta_p2c			:	fb_con_i_per_o_t;
 
 	signal	i_cpu_sel_addr			:	std_logic_vector(15 downto 0);
 	signal	i_cpu_sel				:	unsigned(numbits(C_PERIPHERAL_COUNT)-1 downto 0);
 	signal	i_cpu_sel_oh			:	std_logic_vector(C_PERIPHERAL_COUNT-1 downto 0);
+
+	signal	i_porta_o_bits			:  std_logic_vector(7 downto 0);
 
 begin
 
@@ -190,18 +195,21 @@ begin
 	i_fb_per_p2c(C_PER_LED7) 	<= i_fb_led7_p2c;
 	i_fb_per_p2c(C_PER_UART) 	<= i_fb_uart_p2c;
 	i_fb_per_p2c(C_PER_RAM) 	<= i_fb_ram_p2c;
+	i_fb_per_p2c(C_PER_PORTA) 	<= i_fb_porta_p2c;
 
 	i_fb_mos_c2p					<= i_fb_per_c2p(C_PER_MOS);
 	i_fb_led7_c2p					<= i_fb_per_c2p(C_PER_LED7);
 	i_fb_uart_c2p					<= i_fb_per_c2p(C_PER_UART);
 	i_fb_ram_c2p					<= i_fb_per_c2p(C_PER_RAM);
+	i_fb_porta_c2p					<= i_fb_per_c2p(C_PER_PORTA);
 
 	p_sel:process(i_cpu_sel_addr)
 	variable I:integer;
 	begin
-		I	:=	C_PER_UART when i_cpu_sel_addr(15 downto 12) = x"D" else
-				C_PER_LED7 when i_cpu_sel_addr(15 downto 12) = x"E" else
-				C_PER_MOS  when i_cpu_sel_addr(15 downto 12) = x"F" else
+		I	:=	C_PER_PORTA	when i_cpu_sel_addr(15 downto 12) = x"C" else
+				C_PER_UART	when i_cpu_sel_addr(15 downto 12) = x"D" else
+				C_PER_LED7	when i_cpu_sel_addr(15 downto 12) = x"E" else
+				C_PER_MOS	when i_cpu_sel_addr(15 downto 12) = x"F" else
 				C_PER_RAM;
 
 		i_cpu_sel <= to_unsigned(I, i_cpu_sel'length);
@@ -272,6 +280,22 @@ begin
 		tx_o			=> uart_tx_o
 	);
 
+	e_fb_porta:entity work.fb_port_io
+	generic map (
+		SIM			=> SIM,
+		CLOCKSPEED	=> CLOCKSPEED
+	)
+	port map (
+
+		-- fishbone signals
+		fb_syscon_i	=> i_fbsyscon,
+		fb_c2p_i		=> i_fb_porta_c2p,
+		fb_p2c_o		=>	i_fb_porta_p2c,
+
+		-- port
+		bits_o		=> i_porta_o_bits,
+		bits_i		=> (others => '1')
+	);
 
 
 	p_debug_leds:process(clk_50_i)
@@ -337,8 +361,8 @@ begin
    	clkout1 => i_clk_pll_p,
    	clkin => clk_50_i,
    	pssel => "001",
-   	psdir => '1',
-   	pspulse => '0'
+   	psdir => i_porta_o_bits(1),
+   	pspulse => i_porta_o_bits(0)
 	);
 
 
