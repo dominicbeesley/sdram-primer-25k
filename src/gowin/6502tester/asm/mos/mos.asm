@@ -1,11 +1,13 @@
 
+HW_PORTA		:=	$C000		; control port
 HW_UART_DAT	:=	$D000		; UART DATA
 HW_UART_STAT	:=	$D001		; UART STATUS
 HW_DEBUG		:=	$E000		; 2xLED 7 segment display
 
 		
 		.zeropage
-zp_strptr:		.res 	2
+zp_strptr:	.res 	2
+zp_phase:	.res	1
 
 		.pc02
 		
@@ -109,25 +111,68 @@ reset:		sei
 		jsr	printI
 		.byte	"Lump chips",13,10,0
 
-		
+		lda	#3
+		sta	HW_DEBUG
+
+
+		lda	#0
+		sta	zp_phase
+outer_loop:	lda	zp_phase
+		sta	HW_DEBUG
+		jsr	printHexA
+		lda	#' '
+		jsr	printA
+
+		ldx	#0
+@x1:		lda	str_test,X
+		sta	$2000,X
+		inx
+		cpx	#4
+		bne	@x1
+
+		ldx	#0
+@x2:		lda	$2000,X
+		eor	str_test,X
+		jsr	printHexA
+		inx
+		cpx	#4
+		bne	@x2
+
+		jsr	printI
+		.byte	13,10,0
+
+		; bump phase
+		lda	#1
+		sta	HW_PORTA		
+		lda	#0
+		sta	HW_PORTA		
+
+		ldx	#0
+		ldy	#0
+@dl1:		dey
+		bne	@dl1
+		dex
+		bne	@dl1
+
+
+		inc	zp_phase
+		bne	outer_loop
+
 
 h:		jmp	h
+
+str_test:	.byte $A5,$5A,$BE,$EF
 
 
 	.proc	printI
 		pha
 		phy
 		phx
-
 		tsx
-
-		DEB	3
-
 		lda	$104,X
 		sta	zp_strptr
 		lda	$105,X
 		sta	zp_strptr+1
-
 		ldy	#0
 @lp:		iny
 		lda	(zp_strptr),Y
@@ -144,9 +189,6 @@ h:		jmp	h
 		plx
 		ply
 		pla
-
-		DEB	4
-
 		rts
 	.endproc
 
@@ -155,6 +197,30 @@ h:		jmp	h
 		bmi	@lp4		
 		sta	HW_UART_DAT
 		rts
+	.endproc
+
+
+	.proc	printHexA
+	pha
+	lsr	A
+	lsr	A
+	lsr	A
+	lsr	A
+	jsr	@nyb
+	pla
+	pha
+	jsr	@nyb
+	pla
+	rts
+@nyb:	and	#$F
+	ora	#'0'
+	cmp	#$3A
+	bcc	@s
+	adc	#'A'-$3A-1
+@s:	jsr	printA
+	rts
+
+
 	.endproc
 
 

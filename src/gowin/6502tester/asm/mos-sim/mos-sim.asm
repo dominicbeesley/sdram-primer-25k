@@ -13,6 +13,17 @@ reset:		sei
 		ldx	#$FF
 		txs
 
+; quick SDRAM poke
+		lda	#$5A
+		sta	$2000
+		lda	#$A5
+		sta	$2001
+
+
+		lda	$2000
+		lda	$2001
+
+
 		lda	#2
 		pha
 		lda	#1

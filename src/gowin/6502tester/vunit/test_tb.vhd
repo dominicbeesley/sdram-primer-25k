@@ -24,6 +24,16 @@ architecture rtl of test_tb is
 
 	signal i_GSRI				:	std_logic;
 
+	signal	i_sdram_clk		:	std_logic;
+	signal	i_sdram_DQ		:	std_logic_vector(15 downto 0);
+	signal	i_sdram_A		:	std_logic_vector(12 downto 0); 
+	signal	i_sdram_BS		:	std_logic_vector(1 downto 0); 
+	signal	i_sdram_CKE		:	std_logic;
+	signal	i_sdram_nCS		:	std_logic;
+	signal	i_sdram_nRAS	:	std_logic;
+	signal	i_sdram_nCAS	:	std_logic;
+	signal	i_sdram_nWE		:	std_logic;
+	signal	i_sdram_DQM		:	std_logic_vector(1 downto 0);
 
 
 begin
@@ -81,8 +91,33 @@ begin
 	port map (
 		clk_50_i		=> i_clk,
 		rst_i			=> not i_nrst,
-		uart_tx_o	=> open
+
+		sdram_clk_o		=> i_sdram_clk,
+		sdram_DQ_io		=> i_sdram_DQ,
+		sdram_A_o		=> i_sdram_A,
+		sdram_BS_o		=> i_sdram_BS,
+		sdram_CKE_o		=> i_sdram_CKE,
+		sdram_nCS_o		=> i_sdram_nCS,
+		sdram_nRAS_o	=> i_sdram_nRAS,
+		sdram_nCAS_o	=> i_sdram_nCAS,
+		sdram_nWE_o		=> i_sdram_nWE,
+		sdram_DQM_o		=> i_sdram_DQM
+
 	);
+
+	e_sdram:entity work.W9825G6KH
+	port map (
+		Dq			=> i_sdram_DQ,
+		Addr		=> i_sdram_A,
+		Bs			=> i_sdram_BS,
+		Clk		=> i_sdram_clk,
+		Cke		=> i_sdram_CKE,
+		Cs_n		=> i_sdram_nCS,
+		Ras_n		=> i_sdram_nRAS,
+		Cas_n		=> i_sdram_nCAS,
+		We_n		=> i_sdram_nWE,
+		Dqm		=> i_sdram_DQM
+    );
 
 
 	GSR: entity work.GSR

@@ -23,7 +23,19 @@ entity top is
 		led7_bits			: out		std_logic_vector(6 downto 0);
 		led7_sel				: out		std_logic;
 
-		leds_o				: out		std_logic_vector(7 downto 0)
+		leds_o				: out		std_logic_vector(7 downto 0);
+
+		-- sdram interface
+		sdram_clk_o			:  out	std_logic;
+		sdram_DQ_io			:	inout std_logic_vector(15 downto 0);
+		sdram_A_o			:	out	std_logic_vector(12 downto 0); 
+		sdram_BS_o			:  out 	std_logic_vector(1 downto 0); 
+		sdram_CKE_o			:	out	std_logic;
+		sdram_nCS_o			:	out	std_logic;
+		sdram_nRAS_o		:	out	std_logic;
+		sdram_nCAS_o		:	out	std_logic;
+		sdram_nWE_o			:	out	std_logic;
+		sdram_DQM_o			:	out	std_logic_vector(1 downto 0)
 
 
 	);
@@ -68,10 +80,8 @@ architecture rtl of top is
 
 	signal	r_ram			:	t_rom_type;
 
-	signal	x				:	unsigned(27 downto 0) := (others => '0');
 
-
-	signal	r_debug_val	:	std_logic_vector(7 downto 0) := x"FA";
+	signal	i_led7_val			:	std_logic_vector(7 downto 0) := x"FA";
 
 	signal	i_fbsyscon			:	fb_syscon_t;
 	signal 	i_fb_cpu_c2p		:	fb_con_o_per_i_t;
@@ -79,7 +89,8 @@ architecture rtl of top is
 
 	signal	i_debug_state		: std_logic_vector(2 downto 0);
 
-	constant C_PERIPHERAL_COUNT 	:	natural := 5;
+	constant C_PERIPHERAL_COUNT 	:	natural := 6;
+
 	signal   i_fb_per_c2p			:	fb_con_o_per_i_arr(C_PERIPHERAL_COUNT-1 downto 0);
 	signal   i_fb_per_p2c			:	fb_con_i_per_o_arr(C_PERIPHERAL_COUNT-1 downto 0);
 	constant C_PER_MOS				:	natural := 0;
@@ -97,21 +108,17 @@ architecture rtl of top is
 	constant C_PER_PORTA				:	natural := 4;
 	signal 	i_fb_porta_c2p			:	fb_con_o_per_i_t;
 	signal 	i_fb_porta_p2c			:	fb_con_i_per_o_t;
+	constant C_PER_SDRAM				:	natural := 5;
+	signal 	i_fb_sdram_c2p			:	fb_con_o_per_i_t;
+	signal 	i_fb_sdram_p2c			:	fb_con_i_per_o_t;
 
-	signal	i_cpu_sel_addr			:	std_logic_vector(15 downto 0);
+	signal	i_cpu_sel_addr			:	std_logic_vector(23 downto 0);
 	signal	i_cpu_sel				:	unsigned(numbits(C_PERIPHERAL_COUNT)-1 downto 0);
 	signal	i_cpu_sel_oh			:	std_logic_vector(C_PERIPHERAL_COUNT-1 downto 0);
 
 	signal	i_porta_o_bits			:  std_logic_vector(7 downto 0);
 
 begin
-
-	p_chk:process(clk_50_i)
-	begin
-		if rising_edge(clk_50_i) then
-			x <= x + 1;
-		end if;
-	end process;
 
 	p_rom:process(i_fbsyscon)
 	begin
@@ -160,7 +167,7 @@ begin
 	)
 	port map(
 		EXT_nRESET_i		=> not rst_i,
-		clk_fish_i			=> clk_50_i,
+		clk_fish_i			=> i_clk_pll,
 		clk_lock_i			=> i_lock_pll,
 		sys_dll_lock_i		=> '1',
 		fb_syscon_o			=> i_fbsyscon
@@ -170,7 +177,7 @@ begin
 	generic map(
 		SIM					=> SIM,
 		G_PERIPHERAL_COUNT	=> C_PERIPHERAL_COUNT,
-		G_ADDRESS_WIDTH		=> 16
+		G_ADDRESS_WIDTH		=> 24
 	)
 	port map (
 
@@ -196,12 +203,14 @@ begin
 	i_fb_per_p2c(C_PER_UART) 	<= i_fb_uart_p2c;
 	i_fb_per_p2c(C_PER_RAM) 	<= i_fb_ram_p2c;
 	i_fb_per_p2c(C_PER_PORTA) 	<= i_fb_porta_p2c;
+	i_fb_per_p2c(C_PER_SDRAM) 	<= i_fb_sdram_p2c;
 
 	i_fb_mos_c2p					<= i_fb_per_c2p(C_PER_MOS);
 	i_fb_led7_c2p					<= i_fb_per_c2p(C_PER_LED7);
 	i_fb_uart_c2p					<= i_fb_per_c2p(C_PER_UART);
 	i_fb_ram_c2p					<= i_fb_per_c2p(C_PER_RAM);
 	i_fb_porta_c2p					<= i_fb_per_c2p(C_PER_PORTA);
+	i_fb_sdram_c2p					<= i_fb_per_c2p(C_PER_SDRAM);
 
 	p_sel:process(i_cpu_sel_addr)
 	variable I:integer;
@@ -210,7 +219,8 @@ begin
 				C_PER_UART	when i_cpu_sel_addr(15 downto 12) = x"D" else
 				C_PER_LED7	when i_cpu_sel_addr(15 downto 12) = x"E" else
 				C_PER_MOS	when i_cpu_sel_addr(15 downto 12) = x"F" else
-				C_PER_RAM;
+				C_PER_RAM	when i_cpu_sel_addr(15 downto 12) = x"0" else
+				C_PER_SDRAM;
 
 		i_cpu_sel <= to_unsigned(I, i_cpu_sel'length);
 				
@@ -238,29 +248,23 @@ begin
 		debug_state_o => i_debug_state
 	);
 
-	
-	i_fb_led7_p2c.stall <= '0';
-	i_fb_led7_p2c.rdy <= '1';
-	i_fb_led7_p2c.ack <= '1';
-	i_fb_led7_p2c.D_rd <= (others => '1');
-	
-	p_debug_lat:process(i_fbsyscon)
-	begin
-		 	if rising_edge(i_fbsyscon.clk) then
-				if i_fb_led7_c2p.d_wr_stb = '1' and i_fb_led7_c2p.cyc = '1' and i_fb_led7_c2p.we = '1' then
-					r_debug_val <= i_fb_cpu_c2p.d_wr;
-				end if;			
---				r_debug_val <= i_fb_cpu_c2p.A(7 downto 0);
---				r_debug_val <= 
---						i_fb_cpu_c2p.cyc 
---					& 	i_fb_cpu_c2p.a_stb 
---					& 	i_fbsyscon.rst
---					& 	i_fb_cpu_p2c.stall 
---					&  i_fb_cpu_p2c.ack
---					&  i_debug_state;
-	 	end if;
+	e_fb_led7:entity work.fb_port_io
+	generic map (
+		SIM			=> SIM,
+		CLOCKSPEED	=> CLOCKSPEED
+	)
+	port map (
 
-	end process;
+		-- fishbone signals
+		fb_syscon_i	=> i_fbsyscon,
+		fb_c2p_i		=> i_fb_led7_c2p,
+		fb_p2c_o		=>	i_fb_led7_p2c,
+
+		-- port
+		bits_o		=> i_led7_val,
+		bits_i		=> (others => '1')
+	);
+	
 
 
 	e_fb_uart:entity work.fb_uart
@@ -297,8 +301,36 @@ begin
 		bits_i		=> (others => '1')
 	);
 
+	e_fb_sdram:entity work.fb_sdram
+	generic map(
+		SIM				=> SIM,
+		CLOCKSPEED		=> CLOCKSPEED
+	)
+	port map (
 
-	p_debug_leds:process(clk_50_i)
+		-- fishbone signals
+		fb_syscon_i		=> i_fbsyscon,
+		fb_c2p_i			=> i_fb_sdram_c2p,
+		fb_p2c_o			=> i_fb_sdram_p2c,
+
+		
+
+		-- sdram interface
+		sdram_DQ_io		=> sdram_DQ_io,
+		sdram_A_o		=> sdram_A_o,
+		sdram_BS_o		=> sdram_BS_o,
+		sdram_CKE_o		=> sdram_CKE_o,
+		sdram_nCS_o		=> sdram_nCS_o,
+		sdram_nRAS_o	=> sdram_nRAS_o,
+		sdram_nCAS_o	=> sdram_nCAS_o,
+		sdram_nWE_o		=> sdram_nWE_o,
+		sdram_DQM_o		=> sdram_DQM_o
+	);
+
+	sdram_clk_o		<= i_clk_pll_p;
+
+
+	p_debug_leds:process(i_fbsyscon)
 	variable v_clock_div : unsigned(19 downto 0);
 	variable v_sel	: boolean;
 	variable v_lat : std_logic_vector(7 downto 0);
@@ -327,7 +359,7 @@ begin
 			return r;
 		end function BITS7;
 	begin
-		if rising_edge(clk_50_i) then
+		if rising_edge(i_fbsyscon.clk) then
 
 			if v_sel then
 				led7_sel <= '1';
@@ -342,7 +374,7 @@ begin
 			if v_clock_div(v_clock_div'high) = '1' then
 				v_clock_div := to_unsigned(524283, v_clock_div'length);
 				if v_sel then
-					v_lat := r_debug_val;
+					v_lat := i_led7_val;
 				end if;
 				v_sel := not v_sel;
 			else
@@ -352,7 +384,7 @@ begin
 		end if;
 	end process;
 
-	leds_o <= not (i_debug_state & "1" & rst_i & i_fbsyscon.rst & "10");
+	leds_o <= not (i_debug_state & "1" & rst_i & i_fbsyscon.rst & i_porta_o_bits(1 downto 0));
 
 	your_instance_name: pll1
    port map (

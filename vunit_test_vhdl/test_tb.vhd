@@ -13,8 +13,8 @@ library work;
 entity test_tb is
 	generic (
 		runner_cfg : string;
-		PHASE   : in real := 90.0;							-- degrees of phase lag for clk_p
-		FREQ 	: in integer := 96000000               -- Actual clk frequency, to time 150us initialization delay
+		PHASE   : in real := 120.0;							-- degrees of phase lag for clk_p
+		FREQ 	: in integer := 50000000               -- Actual clk frequency, to time 150us initialization delay
 		);
 end test_tb;
 

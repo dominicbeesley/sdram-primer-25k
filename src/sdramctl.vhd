@@ -88,6 +88,7 @@ architecture rtl of sdramctl is
 	signal r_state_main 	: 	t_state_main := powerup;
 
 	type t_run_state is (
+		start,				-- hold stall for an extra cycle while start
 		idle,
 		refresh,
 		read,
@@ -191,12 +192,14 @@ begin
 					end if;
 					if r_cycle(T_RP + T_RC + T_RC + T_RSC) = '1' then
 						r_state_main <= run;
-						r_run_state <= idle;
+						r_run_state <= start;
 						RESET_CYCLE;
 					end if;
 				when run =>
 
 					case r_run_state is
+						when start =>
+							r_run_state <= idle;
 						when idle =>
 							RESET_CYCLE;
 							if ctl_cyc_i = '1' then
