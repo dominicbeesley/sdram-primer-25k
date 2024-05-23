@@ -324,7 +324,9 @@ begin
 		sdram_nRAS_o	=> sdram_nRAS_o,
 		sdram_nCAS_o	=> sdram_nCAS_o,
 		sdram_nWE_o		=> sdram_nWE_o,
-		sdram_DQM_o		=> sdram_DQM_o
+		sdram_DQM_o		=> sdram_DQM_o,
+
+		ctl_reset_i		=> i_porta_o_bits(2)
 	);
 
 	sdram_clk_o		<= i_clk_pll_p;
@@ -393,7 +395,7 @@ begin
    	clkout1 => i_clk_pll_p,
    	clkin => clk_50_i,
    	pssel => "001",
-   	psdir => i_porta_o_bits(1),
+	  	psdir => i_porta_o_bits(1),
    	pspulse => i_porta_o_bits(0)
 	);
 

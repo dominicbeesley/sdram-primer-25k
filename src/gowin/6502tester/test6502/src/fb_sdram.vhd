@@ -71,7 +71,9 @@ entity fb_sdram is
 		sdram_nRAS_o		:	out	std_logic;
 		sdram_nCAS_o		:	out	std_logic;
 		sdram_nWE_o			:	out	std_logic;
-		sdram_DQM_o			:	out	std_logic_vector(1 downto 0)
+		sdram_DQM_o			:	out	std_logic_vector(1 downto 0);
+
+		ctl_reset_i			:	in		std_logic
 
 
 	);
@@ -192,7 +194,7 @@ begin
 		-- cpu interface
 
 		ctl_rfsh_i			=> '1',
-
+		ctl_reset_i			=> ctl_reset_i,
 		ctl_stall_o			=> i_ctl_stall,
 		ctl_cyc_i			=> i_ctl_cyc,
 		ctl_we_i				=> i_ctl_we,

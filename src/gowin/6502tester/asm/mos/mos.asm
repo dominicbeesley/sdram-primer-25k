@@ -142,7 +142,7 @@ outer_loop:	lda	zp_phase
 		.byte	13,10,0
 
 		; bump phase
-		lda	#1
+		lda	#5		; reset and nudge phase
 		sta	HW_PORTA		
 		lda	#0
 		sta	HW_PORTA		

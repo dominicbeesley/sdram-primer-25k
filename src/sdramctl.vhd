@@ -35,6 +35,7 @@ entity sdramctl is
 		-- cpu interface
 
 		ctl_rfsh_i			:	in		std_logic;
+		ctl_reset_i			:	in		std_logic;
 
 		ctl_stall_o			:	out	std_logic;
 		ctl_cyc_i			:	in		std_logic;
@@ -80,6 +81,7 @@ architecture rtl of sdramctl is
 										:= "0" & to_unsigned(PCTR_MAX, numbits(PCTR_MAX));
 
 	type t_state_main is (
+		reset,
 		powerup,
 		config,
 		run
@@ -168,6 +170,9 @@ begin
 						r_state_main <= config;
 						RESET_CYCLE;
 					end if;
+				when reset => 
+					r_state_main <= config;
+					RESET_CYCLE;				
 				when config =>
 					if r_cycle(0) = '1' then
 						r_cmd <= cmd_precharge;
@@ -263,6 +268,13 @@ begin
 
 
 			end case;
+
+			if ctl_reset_i = '1' then
+				r_state_main <= reset;
+				RESET_CYCLE;
+				r_run_state <= start;
+			end if;
+
 		end if;
 
 	end process;
