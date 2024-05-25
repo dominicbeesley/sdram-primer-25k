@@ -127,7 +127,7 @@ outer_loop:	lda	zp_phase
 @x1:		lda	str_test,X
 		sta	$2000,X
 		inx
-		cpx	#4
+		cpx	#8
 		bne	@x1
 
 		ldx	#0
@@ -135,7 +135,7 @@ outer_loop:	lda	zp_phase
 		eor	str_test,X
 		jsr	printHexA
 		inx
-		cpx	#4
+		cpx	#8
 		bne	@x2
 
 		jsr	printI
@@ -161,7 +161,7 @@ outer_loop:	lda	zp_phase
 
 h:		jmp	h
 
-str_test:	.byte $A5,$5A,$BE,$EF
+str_test:	.byte $A5,$5A,$BE,$EF,$11,$22,33,$44
 
 
 	.proc	printI
