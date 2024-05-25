@@ -83,7 +83,10 @@ architecture rtl of sdramctl is
 	type t_state_main is (
 		reset,
 		powerup,
-		config,
+		config_pre,
+		config_ar_before,
+		config_mode,
+		config_ar_after,
 		run
 	);
 
@@ -102,6 +105,7 @@ architecture rtl of sdramctl is
 	-- used for substates in init/normal operations
 	constant CYC_MAX : natural := 16;
 	signal r_cycle			:	std_logic_vector(CYC_MAX downto 0);
+	signal r_config_ar_ct:	unsigned(3 downto 0);
 
 	type sdram_cmd is record
 		nCS	: std_logic;
@@ -167,38 +171,60 @@ begin
 			case r_state_main is 
 				when powerup =>
 					if r_powerup_ctr(r_powerup_ctr'high) = '1' then
-						r_state_main <= config;
+						r_state_main <= config_pre;
 						RESET_CYCLE;
 					end if;
 				when reset => 
-					r_state_main <= config;
+					r_state_main <= config_ar_before;
 					RESET_CYCLE;				
-				when config =>
+				when config_ar_before =>
+					if r_cycle(0) = '1' then
+						r_cmd <= cmd_autorefresh;
+						sdram_A_o(10) <= '1';
+						sdram_BS_o <= (others => '0');
+						r_config_ar_ct <= r_config_ar_ct + 1;
+					end if;
+					if r_cycle(T_RC) = '1' then
+						RESET_CYCLE;				
+						if r_config_ar_ct(r_config_ar_ct'high) = '1' then
+							r_state_main <= config_pre;
+						end if;
+					end if;
+				when config_pre =>
 					if r_cycle(0) = '1' then
 						r_cmd <= cmd_precharge;
 						sdram_A_o(10) <= '1';
 						sdram_BS_o <= (others => '0');
 					end if;
 					if r_cycle(T_RP) = '1' then
-						r_cmd <= cmd_autorefresh;
-						sdram_A_o(10) <= '1';
-						sdram_BS_o <= (others => '0');
+						r_config_ar_ct <= (others => '0');
+						r_state_main <= config_mode;
+						RESET_CYCLE;				
 					end if;
-					if r_cycle(T_RP + T_RC) = '1' then
-						r_cmd <= cmd_autorefresh;
-						sdram_A_o(10) <= '1';
-						sdram_BS_o <= (others => '0');
-						RESET_RFSH;
-					end if;
-					if r_cycle(T_RP + T_RC + T_RC) = '1' then
+				when config_mode =>
+					if r_cycle(0) = '1' then
 						r_cmd <= cmd_setmode;
 						sdram_A_o <= (10 downto 0 => MODREG, others => '0');
 						sdram_BS_o <= (others => '0');
 					end if;
-					if r_cycle(T_RP + T_RC + T_RC + T_RSC) = '1' then
-						r_state_main <= run;
-						r_run_state <= start;
+					if r_cycle(T_RSC) = '1' then
+						r_config_ar_ct <= (others => '0');
 						RESET_CYCLE;
+						r_state_main <= config_ar_after;
+					end if;
+				when config_ar_after =>
+					if r_cycle(0) = '1' then
+						r_cmd <= cmd_autorefresh;
+						sdram_A_o(10) <= '1';
+						sdram_BS_o <= (others => '0');
+						r_config_ar_ct <= r_config_ar_ct + 1;
+					end if;
+					if r_cycle(T_RC) = '1' then
+						RESET_CYCLE;				
+						if r_config_ar_ct(r_config_ar_ct'high) = '1' then
+							r_state_main <= run;
+							r_run_state <= start;
+						end if;
 					end if;
 				when run =>
 
@@ -252,7 +278,7 @@ begin
 								sdram_DQM_o(0) <= r_A_latched(0);
 								sdram_DQM_o(1) <= not r_A_latched(0);
 							end if;
-							if r_cycle(T_RCD + T_WR + T_RP - 2) = '1' then
+							if r_cycle(T_RCD + T_WR + T_RP) = '1' then
 								r_run_state <= idle;
 							end if;
 						when refresh =>
