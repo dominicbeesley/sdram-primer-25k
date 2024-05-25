@@ -43,17 +43,6 @@ end top;
 
 architecture rtl of top is
 
-	component pll1
-	    port (
-	        lock: out std_logic;
-	        clkout0: out std_logic;
-	        clkout1: out std_logic;
-	        clkin: in std_logic;
-	        pssel: in std_logic_vector(2 downto 0);
-	        psdir: in std_logic;
-	        pspulse: in std_logic
-	    );
-	end component;
 
 	signal   i_lock_pll	: std_logic;
 	signal   i_clk_pll	: std_logic;
@@ -388,7 +377,7 @@ begin
 
 	leds_o <= not (i_debug_state & "1" & rst_i & i_fbsyscon.rst & i_porta_o_bits(1 downto 0));
 
-	your_instance_name: pll1
+	e_pll1: entity work.pll1
    port map (
    	lock => i_lock_pll,
    	clkout0 => i_clk_pll,
