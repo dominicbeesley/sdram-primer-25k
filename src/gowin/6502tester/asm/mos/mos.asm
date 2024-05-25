@@ -5,10 +5,13 @@ HW_UART_STAT	:=	$D001		; UART STATUS
 HW_DEBUG		:=	$E000		; 2xLED 7 segment display
 
 		
+BEST_PHASE	:=	$1F		; second part of tests run at this phase
+
 		.zeropage
 zp_strptr:	.res 	2
 zp_phase:	.res	1
-
+zp_tmp1:		.res	1
+zp_tmp2:		.res	1
 		.pc02
 		
 
@@ -108,8 +111,10 @@ reset:		sei
 		
 		jsr	printI
 		.byte	"RAM OK in pages 0,1",13,10,0
+
+
 		jsr	printI
-		.byte	"Lump chips",13,10,0
+		.byte	"TEST all phases:",13,10,0
 
 		lda	#3
 		sta	HW_DEBUG
@@ -141,28 +146,98 @@ outer_loop:	lda	zp_phase
 		jsr	printI
 		.byte	13,10,0
 
+		jsr	phaseNudge
+
+		inc	zp_phase
+		bne	outer_loop
+
+		jsr	printI
+		.byte	"Setting phase to ",0
+		lda	#BEST_PHASE
+		jsr	printHexA
+		jsr	printI
+		.byte	13,10,0
+
+		ldx	#BEST_PHASE
+nn1:		jsr	phaseNudge
+		dex
+		bne	nn1
+
+		jsr	printI
+		.byte	"Refresh Test...",13,10,"Set memory...",0
+		lda	#$A5
+		ldx	#0
+ss1:		sta	$2000,X
+		inc	A
+		dex	
+		bne	ss1
+
+		jsr	printI
+		.byte	13,10,"Wait...",0
+
+
+		lda	#10
+		sta	zp_tmp2		
+wl2:		lda	#10
+		sta	zp_tmp1
+wl1:		jsr	delay
+
+		dec	zp_tmp1
+		bne	wl1
+		
+		lda	#'.'
+		jsr	printA
+
+		dec	zp_tmp2
+		bne	wl2
+
+h:
+		jsr	printI
+		.byte 13,10,"Checking...",13,10,0
+
+		ldy	#$A5
+		ldx	#0
+cc1:		tya
+		eor	$2000,X
+		jsr	printHexA
+		iny	
+		dex	
+		bne	cc1
+
+
+
+		jmp	h
+
+str_test:	.byte $A5,$5A,$BE,$EF,$11,$22,33,$44
+
+
+	.proc	phaseNudge
+		pha
 		; bump phase
 		lda	#5		; reset and nudge phase
 		sta	HW_PORTA		
 		lda	#0
 		sta	HW_PORTA		
 
+		jsr	delay
+
+		pla
+		rts
+	.endproc	
+
+	.proc	delay
+		phx
+		phy
 		ldx	#0
 		ldy	#0
 @dl1:		dey
 		bne	@dl1
 		dex
 		bne	@dl1
-
-
-		inc	zp_phase
-		bne	outer_loop
-
-
-h:		jmp	h
-
-str_test:	.byte $A5,$5A,$BE,$EF,$11,$22,33,$44
-
+		ply
+		plx
+		rts
+	.endproc	
 
 	.proc	printI
 		pha
