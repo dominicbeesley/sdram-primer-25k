@@ -45,5 +45,5 @@
 -en_clkout5 false
 -en_clkout6 false
 -en_clkfbout false
--mdiv_sel 16
+-mdiv_sel 20
 -mdiv_frac_sel 0

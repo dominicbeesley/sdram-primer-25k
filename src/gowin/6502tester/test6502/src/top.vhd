@@ -12,7 +12,7 @@ entity top is
 	generic(
 		ROMFILE				: string := "../asm/build/mos/mos.mi";
 		SIM					: boolean := FALSE;
-		CLOCKSPEED			: natural := 100
+		CLOCKSPEED			: natural := 125
 		);
 	port(
 		rst_i					: in		std_logic;		-- reset from board

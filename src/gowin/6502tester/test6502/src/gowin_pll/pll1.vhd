@@ -5,7 +5,7 @@
 --Part Number: GW5A-LV25MG121NC1/I0
 --Device: GW5A-25
 --Device Version: A
---Created Time: Sat May 25 16:31:16 2024
+--Created Time: Sat May 25 16:35:31 2024
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -169,7 +169,7 @@ begin
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 16,
+            MDIV_SEL => 20,
             MDIV_FRAC_SEL => 0,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
