@@ -5,7 +5,7 @@
 --Part Number: GW5A-LV25MG121NC1/I0
 --Device: GW5A-25
 --Device Version: A
---Created Time: Wed May 22 15:24:47 2024
+--Created Time: Sat May 25 16:31:16 2024
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -162,8 +162,8 @@ begin
             FCLKIN => "50",
             IDIV_SEL => 1,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 16,
-            ODIV1_SEL => 16,
+            ODIV0_SEL => 8,
+            ODIV1_SEL => 8,
             ODIV2_SEL => 8,
             ODIV3_SEL => 8,
             ODIV4_SEL => 8,

@@ -5,6 +5,7 @@
     <Version>5</Version>
     <Device name="GW5A-25A" pn="GW5A-LV25MG121NC1/I0">gw5a25a-002</Device>
     <FileList>
+        <File path="src/gowin_pll/pll1.v" type="file.verilog" enable="1"/>
         <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/common.vhd" type="file.vhdl" enable="1"/>
         <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1"/>
         <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1"/>

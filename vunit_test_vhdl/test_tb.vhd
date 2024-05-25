@@ -13,8 +13,8 @@ library work;
 entity test_tb is
 	generic (
 		runner_cfg : string;
-		PHASE   : in real := 120.0;							-- degrees of phase lag for clk_p
-		FREQ 	: in integer := 50000000               -- Actual clk frequency, to time 150us initialization delay
+		PHASE   : in real := 190.0;						-- degrees of phase lag for clk_p
+		FREQ 	: in integer := 100000000               -- Actual clk frequency, to time 150us initialization delay
 		);
 end test_tb;
 
@@ -283,6 +283,7 @@ begin
 		sdram_DQM_o		=> i_sdram_DQM,
 
 		ctl_rfsh_i		=> i_ctl_rfsh,
+		ctl_reset_i		=> '0',
 		ctl_stall_o		=> i_ctl_stall,
 		ctl_cyc_i		=> i_ctl_cyc,
 		ctl_we_i			=> i_ctl_we,
@@ -307,6 +308,7 @@ begin
 		Cas_n		=> i_sdram_nCAS,
 		We_n		=> i_sdram_nWE,
 		Dqm		=> i_sdram_DQM
+		--Dqm		=> "00"
     );
 
 --	GSR: entity work.GSR

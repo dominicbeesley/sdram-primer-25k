@@ -260,7 +260,8 @@ begin
 								sdram_DQM_o(0) <= '0';
 								sdram_DQM_o(1) <= '0';
 							end if;
-							if r_cycle(T_RCD + T_CAS) = '1' then
+							-- need +1 below to allow for routing delays? it seems to only work at > 100MHz 
+							if r_cycle(T_RCD + T_CAS + 1) = '1' then
 								r_run_state <= idle;
 								ctl_ack_o <= '1';
 								if r_A_latched(0) then

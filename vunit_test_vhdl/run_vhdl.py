@@ -14,7 +14,7 @@ lib = vu.add_library("lib")
 lib.add_source_files("./*.vhd")
 lib.add_source_files("../library/mine/*.vhd")
 lib.add_source_files("../src/sdramctl.vhd")
-lib.add_source_files("../library/3rdparty/winbond/W9825G6KH/W9825G6KH.modelsim.vp", file_type="verilog", defines=dict({ 'T6CL2':'1', 'BL4':'1'}))
+lib.add_source_files("../library/3rdparty/winbond/W9825G6KH/W9825G6KH.modelsim.vp", file_type="verilog", defines=dict({ 'T6CL2':'1', 'BL1':'1'}))
 
 tb = lib.test_bench("test_tb")
 
