@@ -193,7 +193,7 @@ wl1:		jsr	delay
 
 h:
 		jsr	printI
-		.byte 13,10,"Checking...",13,10,0
+		.byte 13,10,27,"[HChecking...",13,10,0
 
 		ldy	#$A5
 		ldx	#0
