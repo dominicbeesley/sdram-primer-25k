@@ -54,7 +54,9 @@ architecture rtl of sdramctl is
 	constant trp 	: time := 15 ns;
 	constant trcd 	: time := 15 ns;
 	constant trc 	: time := 60 ns;
-	constant trfsh	: time := 7.8 us;
+	--constant trfsh	: time := 7.8 us;
+	constant trfsh	: time := 1.8 us;
+	constant trfc  : time := 63 ns; -- refresh cycle time
 	
 	function CLOCKS(t:time) return integer is
 	variable r:integer;
@@ -74,6 +76,7 @@ architecture rtl of sdramctl is
 	constant T_CAS	: natural := 2;
 	constant T_RFSH: natural := CLOCKS(trfsh);
 	constant T_WR	: natural := 2;
+	constant T_RFC : natural := CLOCKS(trfc);
 
 	-- r_powerup_ctr is 1 bit wider and wrap-around indicates finished
 	constant PCTR_MAX : natural := 200*(CLOCKSPEED/1000000);
@@ -127,7 +130,7 @@ architecture rtl of sdramctl is
 	signal	r_cmd				: sdram_cmd;
 
 	-- r_rfshctr is 1 bit wider than necessary, wrap around indicates ready
-	signal	r_rfshctr 		: unsigned(numbits(T_RFSH) downto 0);
+	signal	r_rfshctr 		: unsigned(numbits(T_RFSH-1) downto 0) := to_unsigned(T_RFSH-1, numbits(T_RFSH-1)+1);
 
 	signal 	r_A_latched		: std_logic_vector(ctl_A_i'range);
 	signal   r_D_wr_latched	: std_logic_vector(7 downto 0);
@@ -283,7 +286,7 @@ begin
 								r_run_state <= idle;
 							end if;
 						when refresh =>
-							if r_cycle(T_RP) = '1' then
+							if r_cycle(T_RFC) = '1' then
 								RESET_CYCLE;
 								r_run_state <= idle;
 							end if;
