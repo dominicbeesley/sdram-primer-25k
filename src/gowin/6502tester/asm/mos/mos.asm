@@ -172,13 +172,34 @@ ss1:		sta	$2000,X
 		dex	
 		bne	ss1
 
+	
+h:
+		jsr	printI
+		.byte 13,10,27,"[2J",27,"[HChecking...",13,10,0
+
+		ldy	#$A5
+		ldx	#0
+cc1:		tya
+		eor	$2000,X
+		jsr	printHexA
+		iny	
+		dex	
+		bne	cc1
+
+		jsr	long_wait
+
+		jmp	h
+
+str_test:	.byte $A5,$5A,$BE,$EF,$11,$22,33,$44
+
+	.proc    long_wait
 		jsr	printI
 		.byte	13,10,"Wait...",0
 
 
-		lda	#10
+		lda	#20
 		sta	zp_tmp2		
-wl2:		lda	#10
+wl2:		lda	#20
 		sta	zp_tmp1
 wl1:		jsr	delay
 
@@ -191,24 +212,9 @@ wl1:		jsr	delay
 		dec	zp_tmp2
 		bne	wl2
 
-h:
-		jsr	printI
-		.byte 13,10,27,"[HChecking...",13,10,0
+		rts
+	.endproc
 
-		ldy	#$A5
-		ldx	#0
-cc1:		tya
-		eor	$2000,X
-		jsr	printHexA
-		iny	
-		dex	
-		bne	cc1
-
-
-
-		jmp	h
-
-str_test:	.byte $A5,$5A,$BE,$EF,$11,$22,33,$44
 
 
 	.proc	phaseNudge
