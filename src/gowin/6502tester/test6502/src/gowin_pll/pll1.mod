@@ -11,7 +11,7 @@
 -type PLL_ADV
 -file_type vhdl
 -ssc false
--rst false
+-rst true
 -rst_pwd false
 -rst_i false
 -rst_o false

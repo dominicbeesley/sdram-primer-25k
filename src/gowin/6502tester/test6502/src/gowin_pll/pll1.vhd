@@ -5,7 +5,7 @@
 --Part Number: GW5A-LV25MG121NC1/I0
 --Device: GW5A-25
 --Device Version: A
---Created Time: Sat May 25 16:35:31 2024
+--Created Time: Sun May 26 14:29:35 2024
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -16,6 +16,7 @@ entity pll1 is
         clkout0: out std_logic;
         clkout1: out std_logic;
         clkin: in std_logic;
+        reset: in std_logic;
         pssel: in std_logic_vector(2 downto 0);
         psdir: in std_logic;
         pspulse: in std_logic
@@ -251,7 +252,7 @@ begin
             MDRDO => mdrdo,
             CLKIN => clkin,
             CLKFB => gw_gnd,
-            RESET => gw_gnd,
+            RESET => reset,
             PLLPWD => gw_gnd,
             RESET_I => gw_gnd,
             RESET_O => gw_gnd,
