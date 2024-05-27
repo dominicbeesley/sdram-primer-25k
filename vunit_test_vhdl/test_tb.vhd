@@ -13,8 +13,9 @@ library work;
 entity test_tb is
 	generic (
 		runner_cfg : string;
-		PHASE   : in real := 190.0;						-- degrees of phase lag for clk_p
-		FREQ 	: in integer := 100000000               -- Actual clk frequency, to time 150us initialization delay
+		PHASE   : in real := 210.0;						-- degrees of phase lag for clk_p
+		FREQ 	: in integer := 125000000;               -- Actual clk frequency, to time 150us initialization delay
+		T_CAS_EXTRA : natural := 1
 		);
 end test_tb;
 
@@ -267,7 +268,8 @@ begin
 
 	e_sdramctl:entity work.sdramctl
 	generic map (
-		CLOCKSPEED => FREQ
+		CLOCKSPEED => FREQ,
+		T_CAS_EXTRA => T_CAS_EXTRA
 		)
 	port map (
 		Clk				=> i_clk,

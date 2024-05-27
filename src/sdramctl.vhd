@@ -10,7 +10,9 @@ use work.common.all;
 
 entity sdramctl is
 	generic (
-		CLOCKSPEED : natural
+		CLOCKSPEED : natural;
+		T_CAS_EXTRA : natural := 0	-- this neads to be 1 for > ~90 MHz
+
 		);
 	port (
 		Clk		:  in		std_logic; 
@@ -62,9 +64,9 @@ architecture rtl of sdramctl is
 	variable r:integer;
 	begin
 		r := (tck + t - 1 fs)/tck;
-		if r <= 1 then
-			r := 2;
-		end if;
+--		if r <= 1 then
+--			r := 2;
+--		end if;
 		return r;
 	end function;
 
@@ -256,7 +258,7 @@ begin
 								r_run_state <= refresh;					
 							end if;
 						when read =>
-							if r_cycle(T_RCD) = '1' then
+							if r_cycle(T_RCD-1) = '1' then
 								r_cmd <= cmd_read;
 								sdram_A_o(8 downto 0) <= r_A_latched(9 downto 1);
 								sdram_A_o(10) <= '1'; -- auto precharge
@@ -264,7 +266,7 @@ begin
 								sdram_DQM_o(1) <= '0';
 							end if;
 							-- need +1 below to allow for routing delays? it seems to only work at > 100MHz 
-							if r_cycle(T_RCD + T_CAS + 1) = '1' then
+							if r_cycle(T_RCD + T_CAS + T_CAS_EXTRA - 1) = '1' then
 								r_run_state <= idle;
 								ctl_ack_o <= '1';
 								if r_A_latched(0) then
@@ -274,7 +276,7 @@ begin
 								end if;
 							end if;
 						when write =>
-							if r_cycle(T_RCD-1) = '1' then
+							if r_cycle(T_RCD - 1) = '1' then
 								r_cmd <= cmd_write;
 								sdram_A_o(8 downto 0) <= r_A_latched(9 downto 1);
 								sdram_A_o(10) <= '1'; -- auto precharge
@@ -282,7 +284,7 @@ begin
 								sdram_DQM_o(0) <= r_A_latched(0);
 								sdram_DQM_o(1) <= not r_A_latched(0);
 							end if;
-							if r_cycle(T_RCD + T_WR + T_RP) = '1' then
+							if r_cycle(T_RCD + T_WR + T_RP - 1) = '1' then
 								r_run_state <= idle;
 							end if;
 						when refresh =>

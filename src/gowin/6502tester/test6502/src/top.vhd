@@ -12,7 +12,9 @@ entity top is
 	generic(
 		ROMFILE				: string := "../asm/build/mos/mos.mi";
 		SIM					: boolean := FALSE;
-		CLOCKSPEED			: natural := 125
+		CLOCKSPEED			: natural := 125;
+		T_CAS_EXTRA 		: natural := 1
+
 		);
 	port(
 		rst_i					: in		std_logic;		-- reset from board
@@ -297,7 +299,8 @@ begin
 	e_fb_sdram:entity work.fb_sdram
 	generic map(
 		SIM				=> SIM,
-		CLOCKSPEED		=> CLOCKSPEED
+		CLOCKSPEED		=> CLOCKSPEED,
+		T_CAS_EXTRA		=> T_CAS_EXTRA
 	)
 	port map (
 

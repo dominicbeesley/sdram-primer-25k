@@ -52,7 +52,8 @@ use work.common.all;
 entity fb_sdram is
 	generic (
 		SIM								: boolean := false;							-- skip some stuff, i.e. slow sdram start up
-		CLOCKSPEED						: natural										-- fast clock speed in mhz						
+		CLOCKSPEED						: natural;										-- fast clock speed in mhz						
+		T_CAS_EXTRA 					: natural := 0	-- this neads to be 1 for > ~90 MHz
 	);
 	port(
 
@@ -169,7 +170,8 @@ begin
 
 	e_sdramctl:entity work.sdramctl
 	generic map (
-		CLOCKSPEED => CLOCKSPEED * 1000000
+		CLOCKSPEED => CLOCKSPEED * 1000000,
+		T_CAS_EXTRA	=> T_CAS_EXTRA
 		)
 	port map (
 		Clk					=> i_sdram_clk,
