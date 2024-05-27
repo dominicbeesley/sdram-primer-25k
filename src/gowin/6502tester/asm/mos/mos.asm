@@ -7,7 +7,7 @@ HW_DEBUG		:=	$E000		; 2xLED 7 segment display
 ; Clock		Best phase	Extra CAS	ODIV	Phase#	cyc_i to ack
 ; 48 MHz		~90		N		25	$3C	104ns
 ; 100 MHz	~219		Y		8	$27	70ns
-; 125 MHz	~180		Y		8	$1F	
+; 125 MHz	~180		Y		8	$1F	56ns
 
 		
 BEST_PHASE	:=	$1F		; second part of tests run at this phase
