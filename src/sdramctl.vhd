@@ -110,7 +110,7 @@ architecture rtl of sdramctl is
 	-- used for substates in init/normal operations
 	constant CYC_MAX : natural := 16;
 	signal r_cycle			:	std_logic_vector(CYC_MAX downto 0);
-	signal r_config_ar_ct:	unsigned(3 downto 0);
+	signal r_config_ar_ct:	unsigned(3 downto 0) := (others => '0');
 
 	type sdram_cmd is record
 		nCS	: std_logic;
@@ -174,14 +174,23 @@ begin
 			ctl_ack_o <= '0';
 
 			case r_state_main is 
-				when powerup =>
+				when powerup | reset =>
 					if r_powerup_ctr(r_powerup_ctr'high) = '1' then
 						r_state_main <= config_pre;
+						r_config_ar_ct <= (others => '0');
 						RESET_CYCLE;
 					end if;
-				when reset => 
+				when config_pre =>
+					if r_cycle(0) = '1' then
+						r_cmd <= cmd_precharge;
+						sdram_A_o(10) <= '1';
+						sdram_BS_o <= (others => '0');
+					end if;
+					if r_cycle(T_RP) = '1' then
+						r_config_ar_ct <= (others => '0');
 					r_state_main <= config_ar_before;
 					RESET_CYCLE;				
+					end if;
 				when config_ar_before =>
 					if r_cycle(0) = '1' then
 						r_cmd <= cmd_autorefresh;
@@ -192,19 +201,8 @@ begin
 					if r_cycle(T_RC) = '1' then
 						RESET_CYCLE;				
 						if r_config_ar_ct(r_config_ar_ct'high) = '1' then
-							r_state_main <= config_pre;
-						end if;
-					end if;
-				when config_pre =>
-					if r_cycle(0) = '1' then
-						r_cmd <= cmd_precharge;
-						sdram_A_o(10) <= '1';
-						sdram_BS_o <= (others => '0');
-					end if;
-					if r_cycle(T_RP) = '1' then
-						r_config_ar_ct <= (others => '0');
 						r_state_main <= config_mode;
-						RESET_CYCLE;				
+						end if;
 					end if;
 				when config_mode =>
 					if r_cycle(0) = '1' then
