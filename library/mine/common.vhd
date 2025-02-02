@@ -47,6 +47,8 @@ package common is
   function floor_log2(i : natural) return natural;
   -- numbits is the number of bits required to hold w as a *number of options*
   function numbits(w : natural) return natural;
+  -- numbits is the number of bits required to hold w as a *number of options*, return 0 for 1 or lower
+  function numbits_zero(w : natural) return natural;
   function b2s(b:boolean) return std_logic;
 end package;
 
@@ -64,7 +66,7 @@ package body common is
 		return integer(floor(log2(real(i))));  -- Example using real calculation
 	end function;
 
-	-- number of bits required to hold a number
+	-- number of bits required to W values, return 1 if W=1, illegal if W=0
  	function numbits(w : natural) return natural is
 	begin
 		assert w > 0 report "width must be > 0" severity error;
@@ -74,6 +76,17 @@ package body common is
 			return ceil_log2(w);
 		end if;
 	end function;
+
+	-- number of bits required to W values, returns 0 if W=0 or W=1
+ 	function numbits_zero(w : natural) return natural is
+	begin
+		if w <= 1 then
+			return 0;
+		else
+			return ceil_log2(w);
+		end if;
+	end function;
+
 
 	function b2s(b:boolean) return std_logic is
 	begin

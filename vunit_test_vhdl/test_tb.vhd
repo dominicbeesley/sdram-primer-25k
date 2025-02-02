@@ -269,7 +269,13 @@ begin
 	e_sdramctl:entity work.sdramctl
 	generic map (
 		CLOCKSPEED => FREQ,
-		T_CAS_EXTRA => T_CAS_EXTRA
+		T_CAS_EXTRA => T_CAS_EXTRA,
+
+		trp 			=> 18 ns,
+		trcd 			=> 18 ns,
+		trc 			=> 60 ns,
+		trfc  		=> 60 ns
+
 		)
 	port map (
 		Clk				=> i_clk,

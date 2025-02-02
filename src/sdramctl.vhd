@@ -34,31 +34,42 @@ use work.common.all;
 
 entity sdramctl is
 	generic (
-		CLOCKSPEED : natural;
-		T_CAS_EXTRA : natural := 0	-- this neads to be 1 for > ~90 MHz
+		CLOCKSPEED 	: natural;
+		T_CAS_EXTRA : natural 	:= 0;	-- this neads to be 1 for > ~90 MHz
+
+		
+		-- SDRAM geometry
+		LANEBITS		: natural 	:= 1;	-- number of byte lanes bits, if 0 don't connect sdram_DQM_o
+		BANKBITS    : natural 	:= 2;	-- number of bits, if none set to 0 and don't connect sdram_BS_o
+		ROWBITS     : positive 	:= 13;
+		COLBITS		: positive 	:= 9;
+
+		-- SDRAM speed 
+		trp 			: time := 15 ns;  -- precharge
+		trcd 			: time := 15 ns;	-- active to read/write
+		trc 			: time := 60 ns;	-- active to active time
+		trfsh			: time := 1.8 us;	-- the refresh control signal will be blocked if it occurs more frequently than this
+		trfc  		: time := 63 ns 	-- refresh cycle time
+		
 
 		);
 	port (
 		Clk		:  in		std_logic; 
 
-	--A(0)		byte lane
-	--A(1..9)	column address
-	--A(10..22)	row address
-	--A(23..24)	bank address
-
-
 		-- sdram interface
-		sdram_DQ_io			:	inout std_logic_vector(15 downto 0);
-		sdram_A_o			:	out	std_logic_vector(12 downto 0); 
-		sdram_BS_o			:  out 	std_logic_vector(1 downto 0); 
+		sdram_DQ_io			:	inout std_logic_vector((2**LANEBITS)*8-1 downto 0);
+		sdram_A_o			:	out	std_logic_vector(maximum(COLBITS, ROWBITS)-1 downto 0); 
+		sdram_BS_o			:  out 	std_logic_vector(maximum(BANKBITS-1, 0) downto 0); 
 		sdram_CKE_o			:	out	std_logic;
 		sdram_nCS_o			:	out	std_logic;
 		sdram_nRAS_o		:	out	std_logic;
 		sdram_nCAS_o		:	out	std_logic;
 		sdram_nWE_o			:	out	std_logic;
-		sdram_DQM_o			:	out	std_logic_vector(1 downto 0);
+		sdram_DQM_o			:	out	std_logic_vector(2 ** LANEBITS - 1 downto 0);
 
 		-- cpu interface
+
+		-- Address laid out as bank, row, column, byte lanes from high to low
 
 		ctl_rfsh_i			:	in		std_logic;
 		ctl_reset_i			:	in		std_logic;
@@ -66,7 +77,7 @@ entity sdramctl is
 		ctl_stall_o			:	out	std_logic;
 		ctl_cyc_i			:	in		std_logic;
 		ctl_we_i				:	in		std_logic;
-		ctl_A_i				:	in		std_logic_vector(24 downto 0);
+		ctl_A_i				:	in		std_logic_vector(LANEBITS+BANKBITS+ROWBITS+COLBITS-1 downto 0);
 		ctl_D_wr_i			:	in		std_logic_vector(7 downto 0);
 		ctl_D_rd_o			:	out	std_logic_vector(7 downto 0);
 		ctl_ack_o			:	out	std_logic
@@ -77,12 +88,6 @@ end sdramctl;
 architecture rtl of sdramctl is
 
 	constant tck 	: time := 1 sec / CLOCKSPEED;	
-	constant trp 	: time := 15 ns;
-	constant trcd 	: time := 15 ns;
-	constant trc 	: time := 60 ns;
-	--constant trfsh	: time := 7.8 us;
-	constant trfsh	: time := 1.8 us;
-	constant trfc  : time := 63 ns; -- refresh cycle time
 	
 	function CLOCKS(t:time) return integer is
 	variable r:integer;
@@ -94,18 +99,25 @@ architecture rtl of sdramctl is
 		return r;
 	end function;
 
-
-	constant T_RP 	: natural := CLOCKS(trp);
-	constant T_RC 	: natural := CLOCKS(trc);
-	constant T_RCD : natural := CLOCKS(trcd);
-	constant T_RSC	: natural := 2;
+	constant T_RP 	: natural := CLOCKS(trp);		-- PRECHARGE cycles
+	constant T_RC 	: natural := CLOCKS(trc);		-- ACTIVE to ACTIVE cycles
+	constant T_RCD : natural := CLOCKS(trcd);		-- ACTIVE to READ/WRITE cycles
+	constant T_RSC	: natural := 2;					-- ? TODO: change to tMRD and get rid of "after"
 	constant T_CAS	: natural := 2;
 	constant T_RFSH: natural := CLOCKS(trfsh);
 	constant T_WR	: natural := 2;
 	constant T_RFC : natural := CLOCKS(trfc);
 
+	constant B_DQM_HI 	: integer := LANEBITS - 1;	-- maybe < 0
+	constant B_COL_LO 	: natural := B_DQM_HI + 1;
+	constant B_COL_HI 	: natural := B_COL_LO + COLBITS - 1;
+	constant B_ROW_LO 	: natural := B_COL_HI + 1;
+	constant B_ROW_HI 	: natural := B_ROW_LO + ROWBITS - 1;
+	constant B_BANK_LO 	: natural := B_ROW_HI + 1;
+	constant B_BANK_HI 	: natural := B_BANK_LO + BANKBITS - 1;
+
 	-- r_powerup_ctr is 1 bit wider and wrap-around indicates finished
-	constant PCTR_MAX : natural := 200*(CLOCKSPEED/1000000);
+	constant PCTR_MAX : natural := 200 * (CLOCKSPEED / 1000000);
 	signal r_powerup_ctr : unsigned(numbits(PCTR_MAX) downto 0) 
 										:= "0" & to_unsigned(PCTR_MAX, numbits(PCTR_MAX));
 
@@ -151,7 +163,7 @@ architecture rtl of sdramctl is
 	constant cmd_autorefresh: sdram_cmd := (nCS => '0', nRAS => '0', nCAS => '0', nWE => '1');
 	constant cmd_precharge	: sdram_cmd := (nCS => '0', nRAS => '0', nCAS => '1', nWE => '0');
 
-	constant MODREG			: std_logic_vector(10 downto 0) := "00000" & std_logic_vector(to_unsigned(T_CAS,2)) & "0000"; --Burst=1, Seq, Cas=3
+	constant MODREG			: std_logic_vector(10 downto 0) := "00000" & std_logic_vector(to_unsigned(T_CAS,2)) & "0000"; --Burst=1, Seq, Cas=T_CAS
 
 	signal	r_cmd				: sdram_cmd;
 
@@ -174,14 +186,62 @@ begin
 	sdram_nWE_o 	<= r_cmd.nWE;
 
 	p_state:process(clk)
+
 		procedure RESET_CYCLE is
 		begin
 			r_cycle <= (0 => '1', others => '0');
 		end RESET_CYCLE;
+	
 		procedure RESET_RFSH is
 		begin
 			r_rfshctr <= to_unsigned(T_RFSH-1, r_rfshctr'length);
 		end RESET_RFSH;
+	
+		function DQM(
+			A : std_logic_vector
+			) return std_logic_vector is
+		variable ret : std_logic_vector(sdram_DQM_o'range);
+		begin
+			ret := (others => '1');
+			if B_DQM_HI < 0 then
+				ret := (others => '0');
+			else
+				ret(to_integer(unsigned(A(B_DQM_HI downto 0)))) := '0';
+			end if;
+			return ret;
+		end function;
+
+		-- return an 8 bit slice from a wider data bus, indexed by low bits of A
+		function DQSLICE(
+			A : std_logic_vector;
+			D : std_logic_vector
+			) return std_logic_vector is
+		variable I : natural;
+		variable ret : std_logic_vector(7 downto 0);
+		begin
+			if B_DQM_HI < 0 then
+				ret := D(7 downto 0);
+			else
+				I := to_integer(unsigned(A(B_DQM_HI downto 0))) * 8;
+				ret := D(I+7 downto I);
+			end if;
+			return ret;
+		end DQSLICE;
+
+		-- repeat the give 8 bit data to fill the wider data bus
+		function DQREP(
+			D : std_logic_vector(7 downto 0)
+		) return std_logic_vector is
+		variable ret : std_logic_vector((2 ** LANEBITS) * 8 - 1 downto 0);
+		begin
+
+			for I in 0 to 2 ** LANEBITS - 1 loop
+				ret(7 + I * 8 downto I * 8) := D;
+			end loop;
+
+			return ret;
+		end DQREP;
+
 	begin
 
 		if rising_edge(clk) then
@@ -206,9 +266,9 @@ begin
 					end if;
 				when config_pre =>
 					if r_cycle(0) = '1' then
-						r_cmd <= cmd_precharge;
-						sdram_A_o(10) <= '1';
-						sdram_BS_o <= (others => '0');
+						r_cmd <= cmd_precharge;					
+						sdram_A_o(10) <= '1';								-- all banks get same mode setting
+						sdram_BS_o <= (others => '0');					-- don't care
 					end if;
 					if r_cycle(T_RP) = '1' then
 						r_config_ar_ct <= (others => '0');
@@ -231,7 +291,8 @@ begin
 				when config_mode =>
 					if r_cycle(0) = '1' then
 						r_cmd <= cmd_setmode;
-						sdram_A_o <= (10 downto 0 => MODREG, others => '0');
+						sdram_A_o <= (others => '0');
+						sdram_A_o(10 downto 0) <= MODREG;
 						sdram_BS_o <= (others => '0');
 					end if;
 					if r_cycle(T_RSC) = '1' then
@@ -263,8 +324,9 @@ begin
 							if ctl_cyc_i = '1' then
 								r_A_latched <= ctl_A_i;
 								r_cmd <= cmd_bankact;
-								sdram_BS_o <= ctl_A_i(24 downto 23);	
-								sdram_A_o  <= ctl_A_i(22 downto 10);
+								sdram_BS_o <= ctl_A_i(B_BANK_HI downto B_BANK_LO);	
+								sdram_A_o <= (others => '0');
+								sdram_A_o(ROWBITS-1 downto 0)  <= ctl_A_i(B_ROW_HI downto B_ROW_LO);
 								if ctl_we_i = '0' then
 									r_run_state <= read;
 								else
@@ -282,29 +344,25 @@ begin
 						when read =>
 							if r_cycle(T_RCD-1) = '1' then
 								r_cmd <= cmd_read;
-								sdram_A_o(8 downto 0) <= r_A_latched(9 downto 1);
+								sdram_A_o <= (others => '0');
+								sdram_A_o(COLBITS-1 downto 0) <= r_A_latched(B_COL_HI downto B_COL_LO);
 								sdram_A_o(10) <= '1'; -- auto precharge
-								sdram_DQM_o(0) <= '0';
-								sdram_DQM_o(1) <= '0';
+								sdram_DQM_o <= (others => '0');
 							end if;
 							-- need +1 below to allow for routing delays? it seems to only work at > 100MHz 
 							if r_cycle(T_RCD + T_CAS + T_CAS_EXTRA - 1) = '1' then
 								r_run_state <= idle;
 								ctl_ack_o <= '1';
-								if r_A_latched(0) then
-									ctl_D_rd_o <= sdram_DQ_io(15 downto 8);
-								else
-									ctl_D_rd_o <= sdram_DQ_io(7 downto 0);
-								end if;
+								ctl_D_rd_o <= DQSLICE(r_A_latched, sdram_DQ_io);
 							end if;
 						when write =>
 							if r_cycle(T_RCD - 1) = '1' then
 								r_cmd <= cmd_write;
-								sdram_A_o(8 downto 0) <= r_A_latched(9 downto 1);
+								sdram_A_o <= (others => '0');
+								sdram_A_o(COLBITS-1 downto 0) <= r_A_latched(B_COL_HI downto B_COL_LO);
 								sdram_A_o(10) <= '1'; -- auto precharge
-								sdram_DQ_io <= r_D_wr_latched & r_D_wr_latched;
-								sdram_DQM_o(0) <= r_A_latched(0);
-								sdram_DQM_o(1) <= not r_A_latched(0);
+								sdram_DQ_io <= DQREP(r_D_wr_latched);
+								sdram_DQM_o <= DQM(r_A_latched);
 							end if;
 							if r_cycle(T_RCD + T_WR + T_RP - 1) = '1' then
 								r_run_state <= idle;
