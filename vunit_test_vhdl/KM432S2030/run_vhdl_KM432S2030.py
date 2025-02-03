@@ -7,30 +7,33 @@ def encode(tb_cfg):
 # Create VUnit instance by parsing command line arguments
 vu = VUnit.from_argv()
 
+
 # Create library 'lib'
+fmf = vu.add_library("fmf")
 lib = vu.add_library("lib")
 
 # Add all files ending in .vhd in current working directory to library
-lib.add_source_files("./test_tb.vhd")
+lib.add_source_files("../test_tb.vhd")
 lib.add_source_files("../library/mine/*.vhd")
 lib.add_source_files("../src/sdramctl.vhd")
-lib.add_source_files("./sdram_wrap/sdram_wrap_W9825G6KH.vhd")
-lib.add_source_files("../library/3rdparty/winbond/W9825G6KH/W9825G6KH.modelsim.vp", file_type="verilog", defines=dict({ 'T6CL2':'1', 'BL1':'1'}))
+lib.add_source_files("./sdram_wrap/sdram_wrap_KM432S2030.vhd")
+fmf.add_source_files("../library/3rdparty/fmf/all_packages/*.vhd")
+lib.add_source_files("../library/3rdparty/fmf/all_ram/km432s2030.vhd", vhdl_standard="1993")
 
 tb = lib.test_bench("test_tb")
 
 tb.set_generic('PHASE'             ,'210.0')
 tb.set_generic('FREQ'              ,'125000000')
-tb.set_generic('T_CAS_EXTRA'       ,'1')
-tb.set_generic('LANEBITS'          ,'1')
+tb.set_generic('T_CAS_EXTRA'       ,'0')
+tb.set_generic('LANEBITS'          ,'2')
 tb.set_generic('BANKBITS'          ,'2')
-tb.set_generic('ROWBITS'           ,'13')
-tb.set_generic('COLBITS'           ,'9')
-tb.set_generic('trp'               ,'18ns')
-tb.set_generic('trcd'              ,'18ns')
-tb.set_generic('trc'               ,'60ns')
+tb.set_generic('ROWBITS'           ,'11')
+tb.set_generic('COLBITS'           ,'8')
+tb.set_generic('trp'               ,'30ns')
+tb.set_generic('trcd'              ,'30ns')
+tb.set_generic('trc'               ,'90ns')
 tb.set_generic('trfsh'             ,'1.8us')
-tb.set_generic('trfc'              ,'60ns')
+tb.set_generic('trfc'              ,'90ns')
 
 
 # Run vunit function
