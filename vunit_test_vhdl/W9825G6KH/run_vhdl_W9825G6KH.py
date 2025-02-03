@@ -12,10 +12,10 @@ lib = vu.add_library("lib")
 
 # Add all files ending in .vhd in current working directory to library
 lib.add_source_files("../test_tb.vhd")
-lib.add_source_files("../library/mine/*.vhd")
-lib.add_source_files("../src/sdramctl.vhd")
-lib.add_source_files("./sdram_wrap/sdram_wrap_W9825G6KH.vhd")
-lib.add_source_files("../library/3rdparty/winbond/W9825G6KH/W9825G6KH.modelsim.vp", file_type="verilog", defines=dict({ 'T6CL2':'1', 'BL1':'1'}))
+lib.add_source_files("../../library/mine/*.vhd")
+lib.add_source_files("../../src/sdramctl.vhd")
+lib.add_source_files("../sdram_wrap/sdram_wrap_W9825G6KH.vhd")
+lib.add_source_files("../../library/3rdparty/winbond/W9825G6KH/W9825G6KH.modelsim.vp", file_type="verilog", defines=dict({ 'T6CL2':'1', 'BL1':'1'}))
 
 tb = lib.test_bench("test_tb")
 
