@@ -287,8 +287,16 @@ begin
 
 				FOR I in 1 TO 255 loop
 					i_ctl_A <= ADDR(I * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)); -- preload next address
+					if i_ctl_ack = '1' then
+						assert i_ctl_D_rd = std_logic_vector(to_unsigned(I-1, 8)) 
+							report "read address " & to_hstring(unsigned(ADDR((I-1) * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)))) & " returned " & to_hstring(unsigned(i_ctl_D_rd)) severity error;
+					end if;
 					wait until rising_edge(i_clk);
 					while i_ctl_stall /= '0' loop
+						if i_ctl_ack = '1' then
+							assert i_ctl_D_rd = std_logic_vector(to_unsigned(I-1, 8)) 
+								report "read address " & to_hstring(unsigned(ADDR((I-1) * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)))) & " returned " & to_hstring(unsigned(i_ctl_D_rd)) severity error;
+						end if;
 						wait until rising_edge(i_clk);
 					end loop;
 
