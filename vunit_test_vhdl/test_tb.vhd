@@ -15,53 +15,59 @@ entity test_tb is
 		runner_cfg : string;
 		PHASE   : in real := 210.0;						-- degrees of phase lag for clk_p
 		FREQ 	: in integer := 125000000;               -- Actual clk frequency, to time 150us initialization delay
-		T_CAS_EXTRA : natural := 1
+		T_CAS_EXTRA : natural := 1;
+
+		-- SDRAM geometry
+		LANEBITS		: natural 	:= 1;	-- number of byte lanes bits, if 0 don't connect sdram_DQM_o
+		BANKBITS    : natural 	:= 2;	-- number of bits, if none set to 0 and don't connect sdram_BS_o
+		ROWBITS     : positive 	:= 13;
+		COLBITS		: positive 	:= 9;
+
+		-- SDRAM speed 
+		trp 			: time := 18 ns;  -- precharge
+		trcd 			: time := 18 ns;	-- active to read/write
+		trc 			: time := 60 ns;	-- active to active time
+		trfsh			: time := 1.8 us;	-- the refresh control signal will be blocked if it occurs more frequently than this
+		trfc  		: time := 60 ns 	-- refresh cycle time
+
 		);
 end test_tb;
 
 architecture rtl of test_tb is
 
-	component W9825G6KH port (
-		Dq			:	inout std_logic_vector(15 downto 0);
-		Addr		:	in		std_logic_vector(12 downto 0); 
-		Bs			:  in 	std_logic_vector(1 downto 0); 
+	component sdram_wrap port (
+		Dq			:	inout std_logic_vector(2**LANEBITS * 8 - 1 downto 0);
+		Addr		:	in		std_logic_vector(maximum(COLBITS, ROWBITS)-1 downto 0); 
+		Bs			:  in 	std_logic_vector(maximum(BANKBITS, 1)-1 downto 0); 
 		Clk		:  in		std_logic; 
 		Cke		:	in		std_logic;
 		Cs_n		:	in		std_logic;
 		Ras_n		:	in		std_logic;
 		Cas_n		:	in		std_logic;
 		We_n		:	in		std_logic;
-		Dqm		:	in		std_logic_vector(1 downto 0)
+		Dqm		:	in		std_logic_vector(2 ** LANEBITS - 1 downto 0)
 	);
 	end component;
 
    signal i_clk           : std_logic;
    signal i_clk_p         : std_logic;
-   signal i_resetn        : std_logic;
-   signal i_read          : std_logic;
-   signal i_write         : std_logic;
-   signal i_addr          : std_logic_vector(21 downto 0);
-   signal i_din           : std_logic_vector(15 downto 0);
-   signal i_byte_write    : std_logic;
-   signal i_dout          : std_logic_vector(15 downto 0);
-   signal i_busy          : std_logic;
 
-	signal i_sdram_DQ			: std_logic_vector(15 downto 0);
-	signal i_sdram_A			: std_logic_vector(12 downto 0); 
-	signal i_sdram_BS			: std_logic_vector(1 downto 0); 
+	signal i_sdram_DQ			: std_logic_vector(2**LANEBITS * 8 - 1 downto 0);
+	signal i_sdram_A			: std_logic_vector(maximum(COLBITS, ROWBITS)-1 downto 0); 
+	signal i_sdram_BS			: std_logic_vector(maximum(BANKBITS, 1)-1 downto 0); 
 	signal i_sdram_CKE		: std_logic;
 	signal i_sdram_nCS		: std_logic;
 	signal i_sdram_nRAS		: std_logic;
 	signal i_sdram_nCAS		: std_logic;
 	signal i_sdram_nWE		: std_logic;
-	signal i_sdram_DQM		: std_logic_vector(1 downto 0);
+	signal i_sdram_DQM		: std_logic_vector(2 ** LANEBITS - 1 downto 0);
 
 	signal i_GSRI				: std_logic;
 
 	signal i_ctl_stall		:	std_logic;
 	signal i_ctl_cyc			:	std_logic;
 	signal i_ctl_we			:	std_logic;
-	signal i_ctl_A				:	std_logic_vector(24 downto 0);
+	signal i_ctl_A				:	std_logic_vector(LANEBITS+ROWBITS+COLBITS+BANKBITS-1 downto 0);
 	signal i_ctl_D_wr			:	std_logic_vector(7 downto 0);
 	signal i_ctl_D_rd			:	std_logic_vector(7 downto 0);
 	signal i_ctl_ack			:	std_logic;
@@ -106,7 +112,7 @@ begin
 	end procedure;
 
 
-	procedure DO_READ_BYTE(address : std_logic_vector(24 downto 0); data : out std_logic_vector(7 downto 0)) is
+	procedure DO_READ_BYTE(address : std_logic_vector(i_ctl_A'range); data : out std_logic_vector(7 downto 0)) is
 	variable v_iter : natural := 0;
 	begin
 
@@ -154,7 +160,7 @@ begin
 
 	end procedure;
 
-	procedure DO_WRITE_BYTE(address : std_logic_vector(24 downto 0); data : std_logic_vector(7 downto 0)) is
+	procedure DO_WRITE_BYTE(address : std_logic_vector(i_ctl_A'range); data : std_logic_vector(7 downto 0)) is
 	variable v_iter : natural := 0;
 	begin
 		
@@ -201,7 +207,7 @@ begin
 
 
 
-	procedure DO_READ_BYTE_C(address : std_logic_vector(24 downto 0); expect_data : std_logic_vector(7 downto 0)) is
+	procedure DO_READ_BYTE_C(address : std_logic_vector(i_ctl_a'range); expect_data : std_logic_vector(7 downto 0)) is
 	variable D:std_logic_vector(7 downto 0);
 	begin
 		DO_READ_BYTE(address, D);
@@ -210,7 +216,7 @@ begin
 
 	FUNCTION ADDR(a:integer) return std_logic_vector is
 	begin
-		return std_logic_vector(to_unsigned(a, 25));
+		return std_logic_vector(to_unsigned(a, i_ctl_a'length));
 	end function ADDR;
 
 
@@ -247,17 +253,51 @@ begin
 				i_ctl_rfsh	 <= '1';
 
 				FOR I in 0 TO 255 loop
-					DO_WRITE_BYTE(ADDR(I * 16#20000#), std_logic_vector(to_unsigned(I,8)));
+					DO_WRITE_BYTE(ADDR(I * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)), std_logic_vector(to_unsigned(I,8)));
 				END LOOP;
 
 				wait for 1 us;
 
 				FOR I in 0 TO 255 loop
-					DO_READ_BYTE_C(ADDR(I * 16#20000#), std_logic_vector(to_unsigned(I,8)));
+					DO_READ_BYTE_C(ADDR(I * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)), std_logic_vector(to_unsigned(I,8)));
 				END LOOP;
 
 				wait for 1 us;
+			elsif run("backtoback-read") then
+
+				DO_INIT;
+
+				i_ctl_rfsh	 <= '1';
+
+				FOR I in 0 TO 255 loop
+					DO_WRITE_BYTE(ADDR(I * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)), std_logic_vector(to_unsigned(I,8)));
+				END LOOP;
+
+				wait for 1 us;
+
+				wait until rising_edge(i_clk);
+				i_ctl_cyc 	<= '1';
+				i_ctl_A 		<= ADDR(0);
+				i_ctl_we  	<= '0';
+
+				wait until rising_edge(i_clk);
+				while i_ctl_stall /= '0' loop
+					wait until rising_edge(i_clk);
+				end loop;
+
+				FOR I in 1 TO 255 loop
+					i_ctl_A <= ADDR(I * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)); -- preload next address
+					wait until rising_edge(i_clk);
+					while i_ctl_stall /= '0' loop
+						wait until rising_edge(i_clk);
+					end loop;
+
+				END LOOP;
+
+				wait for 1 us;
+
 			end if;
+
 
 		end loop;
 
@@ -271,10 +311,16 @@ begin
 		CLOCKSPEED => FREQ,
 		T_CAS_EXTRA => T_CAS_EXTRA,
 
-		trp 			=> 18 ns,
-		trcd 			=> 18 ns,
-		trc 			=> 60 ns,
-		trfc  		=> 60 ns
+		LANEBITS		=> LANEBITS,
+		BANKBITS    => BANKBITS,
+		ROWBITS     => ROWBITS,
+		COLBITS		=> COLBITS,
+
+		trp 			=> trp,
+		trcd 			=> trcd,
+		trc 			=> trc,
+		trfsh			=> trfsh,
+		trfc  		=> trfc
 
 		)
 	port map (
@@ -301,10 +347,7 @@ begin
 		ctl_ack_o		=> i_ctl_ack
     );
 
-
-
-
-	e_sdram:entity work.W9825G6KH
+	e_sdram:sdram_wrap
 	port map (
 		Dq			=> i_sdram_DQ,
 		Addr		=> i_sdram_A,
@@ -316,7 +359,6 @@ begin
 		Cas_n		=> i_sdram_nCAS,
 		We_n		=> i_sdram_nWE,
 		Dqm		=> i_sdram_DQM
-		--Dqm		=> "00"
     );
 
 --	GSR: entity work.GSR

@@ -351,9 +351,13 @@ begin
 							end if;
 							-- need +1 below to allow for routing delays? it seems to only work at > 100MHz 
 							if r_cycle(T_RCD + T_CAS + T_CAS_EXTRA - 1) = '1' then
-								r_run_state <= idle;
+								if T_RP < 2 then
+									r_run_state <= idle;
+								end if;
 								ctl_ack_o <= '1';
 								ctl_D_rd_o <= DQSLICE(r_A_latched, sdram_DQ_io);
+							elsif r_cycle(T_RCD + T_CAS + T_CAS_EXTRA + T_RP - 2) = '1' then
+								r_run_state <= idle;
 							end if;
 						when write =>
 							if r_cycle(T_RCD - 1) = '1' then
