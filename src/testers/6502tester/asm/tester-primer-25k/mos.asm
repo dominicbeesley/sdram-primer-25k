@@ -250,6 +250,16 @@ wl1:		jsr	delay
 		rts
 	.endproc	
 
+
+	.proc	printA
+@lp4:		bit	HW_UART_STAT
+		bmi	@lp4		
+		sta	HW_UART_DAT
+		rts
+	.endproc
+
+
+
 	.proc	printI
 		pha
 		phy
@@ -278,14 +288,6 @@ wl1:		jsr	delay
 		rts
 	.endproc
 
-	.proc	printA
-@lp4:		bit	HW_UART_STAT
-		bmi	@lp4		
-		sta	HW_UART_DAT
-		rts
-	.endproc
-
-
 	.proc	printHexA
 		pha
 		lsr	A
@@ -306,8 +308,6 @@ wl1:		jsr	delay
 @s:		jsr	printA
 		rts
 	.endproc
-
-
 
 
 

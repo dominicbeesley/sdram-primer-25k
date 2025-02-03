@@ -1,5 +1,5 @@
 
-BUILD=../build/mos
+BUILD=../build/tester-primer-25k
 
 
 X:=$(shell mkdir -p $(BUILD))

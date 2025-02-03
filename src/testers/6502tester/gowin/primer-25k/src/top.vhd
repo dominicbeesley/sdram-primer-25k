@@ -8,9 +8,17 @@ library work;
 use work.common.all;
 use work.fishbone.all;
 
+
+-- Test the SDRAM on a Primer 25K expects:
+-- with Primer oriented with PMODS at "top", usb left, hdmi right
+-- SDRAM "pmod" in SDRAM header
+-- PMOD_LEDx8 in right socket
+-- POMD_DTx2 in middle socket
+
+
 entity top is
 	generic(
-		ROMFILE				: string := "../../asm/build/mos/mos.mi";
+		ROMFILE				: string := "../../asm/build/tester-primer-25k/mos.mi";
 		SIM					: boolean := FALSE;
 		CLOCKSPEED			: natural := 125;
 		T_CAS_EXTRA 		: natural := 1;
