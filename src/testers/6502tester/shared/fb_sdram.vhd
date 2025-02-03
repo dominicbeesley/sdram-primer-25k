@@ -53,7 +53,23 @@ entity fb_sdram is
 	generic (
 		SIM								: boolean := false;							-- skip some stuff, i.e. slow sdram start up
 		CLOCKSPEED						: natural;										-- fast clock speed in mhz						
-		T_CAS_EXTRA 					: natural := 0	-- this neads to be 1 for > ~90 MHz
+		T_CAS_EXTRA 					: natural := 0;								-- this neads to be 1 for > ~90 MHz
+
+		
+		-- SDRAM geometry
+		LANEBITS		: natural;
+		BANKBITS    : natural;
+		ROWBITS     : positive;
+		COLBITS		: positive;
+
+		-- SDRAM speed 
+		trp 			: time;
+		trcd 			: time;
+		trc 			: time;
+		trfsh			: time;
+		trfc  		: time
+
+
 	);
 	port(
 
@@ -64,15 +80,15 @@ entity fb_sdram is
 
 		-- sdram interface
 		sdram_clk_o			:  out	std_logic;
-		sdram_DQ_io			:	inout std_logic_vector(15 downto 0);
-		sdram_A_o			:	out	std_logic_vector(12 downto 0); 
-		sdram_BS_o			:  out 	std_logic_vector(1 downto 0); 
+		sdram_DQ_io			:	inout std_logic_vector((2**LANEBITS)*8-1 downto 0);
+		sdram_A_o			:	out	std_logic_vector(maximum(COLBITS, ROWBITS)-1 downto 0); 
+		sdram_BS_o			:  out 	std_logic_vector(maximum(BANKBITS-1, 0) downto 0); 
 		sdram_CKE_o			:	out	std_logic;
 		sdram_nCS_o			:	out	std_logic;
 		sdram_nRAS_o		:	out	std_logic;
 		sdram_nCAS_o		:	out	std_logic;
 		sdram_nWE_o			:	out	std_logic;
-		sdram_DQM_o			:	out	std_logic_vector(1 downto 0);
+		sdram_DQM_o			:	out	std_logic_vector(2 ** LANEBITS - 1 downto 0);
 
 		ctl_reset_i			:	in		std_logic
 
@@ -85,7 +101,7 @@ architecture rtl of fb_sdram is
 	signal 	i_ctl_stall			:	std_logic;
 	signal 	i_ctl_cyc			:	std_logic;
 	signal 	i_ctl_we				:	std_logic;
-	signal 	i_ctl_A				:	std_logic_vector(24 downto 0);
+	signal 	i_ctl_A				:	std_logic_vector(LANEBITS+BANKBITS+ROWBITS+COLBITS-1 downto 0);
 	signal 	i_ctl_D_wr			:	std_logic_vector(7 downto 0);
 	signal 	i_ctl_D_rd			:	std_logic_vector(7 downto 0);
 	signal 	i_ctl_ack			:	std_logic;
@@ -96,6 +112,19 @@ architecture rtl of fb_sdram is
 	signal	r_rdy					:  std_logic;
 	
 	signal	i_sdram_clk			: std_logic;
+
+	-- truncate or 0 pad A to fit in i_ctl_A
+	function ADDR(A:std_logic_vector) return std_logic_vector is
+	variable ret : std_logic_vector(i_ctl_A'range);
+	begin
+		if A'length >= i_ctl_A'length then
+			ret := A(i_ctl_A'range);
+		else
+			ret := (others => '0');
+			ret(A'range) := A;
+		end if;
+		return ret;
+	end ADDR;
 
 begin
 
@@ -122,7 +151,7 @@ begin
 					r_rdy <= '0';
 					if fb_c2p_i.cyc = '1' and fb_c2p_i.A_stb = '1' then
 						i_ctl_we 	<= fb_c2p_i.we;
-						i_ctl_A  	<= "0" & fb_c2p_i.A;
+						i_ctl_A  	<= ADDR(fb_c2p_i.A);
 						i_ctl_D_wr <= fb_c2p_i.D_wr;
 
 						if fb_c2p_i.we = '1' and fb_c2p_i.D_wr_stb = '0' then
@@ -170,8 +199,17 @@ begin
 
 	e_sdramctl:entity work.sdramctl
 	generic map (
-		CLOCKSPEED => CLOCKSPEED * 1000000,
-		T_CAS_EXTRA	=> T_CAS_EXTRA
+		CLOCKSPEED 	=> CLOCKSPEED * 1000000,
+		T_CAS_EXTRA	=> T_CAS_EXTRA,
+		LANEBITS		=> LANEBITS,
+		BANKBITS		=> BANKBITS,
+		ROWBITS		=> ROWBITS,
+		COLBITS		=> COLBITS,
+		trp			=> trp,
+		trcd			=> trcd,
+		trc			=> trc,
+		trfsh			=> trfsh,
+		trfc			=> trfc
 		)
 	port map (
 		Clk					=> i_sdram_clk,

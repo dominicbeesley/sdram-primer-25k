@@ -1,5 +1,4 @@
 **/impl/
-*.user
 *.sublime-*
 *.bak
 **/vunit_out/

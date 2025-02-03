@@ -1,0 +1,28 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW5A-25A" pn="GW5A-LV25MG121NC1/I0">gw5a25a-002</Device>
+    <FileList>
+        <File path="../../../../../library/mine/common.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_null.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/R65Cx2.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/clockreg.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/fb_65c02.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/fb_port_io.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/fb_sdram.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/fb_uart.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../sdramctl.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/top.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_pll/pll1.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/test6502.cst" type="file.cst" enable="1"/>
+        <File path="src/test6502.sdc" type="file.sdc" enable="1"/>
+    </FileList>
+</Project>

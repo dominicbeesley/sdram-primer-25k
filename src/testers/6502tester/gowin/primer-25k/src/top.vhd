@@ -10,10 +10,23 @@ use work.fishbone.all;
 
 entity top is
 	generic(
-		ROMFILE				: string := "../asm/build/mos/mos.mi";
+		ROMFILE				: string := "../../asm/build/mos/mos.mi";
 		SIM					: boolean := FALSE;
 		CLOCKSPEED			: natural := 125;
-		T_CAS_EXTRA 		: natural := 1
+		T_CAS_EXTRA 		: natural := 1;
+
+		-- SDRAM geometry
+		LANEBITS		: natural 	:= 1;	-- number of byte lanes bits, if 0 don't connect sdram_DQM_o
+		BANKBITS    : natural 	:= 2;	-- number of bits, if none set to 0 and don't connect sdram_BS_o
+		ROWBITS     : positive 	:= 13;
+		COLBITS		: positive 	:= 9;
+
+		-- SDRAM speed
+		trp 			: time := 15 ns;  -- precharge
+		trcd 			: time := 15 ns;	-- active to read/write
+		trc 			: time := 60 ns;	-- active to active time
+		trfsh			: time := 1.8 us;	-- the refresh control signal will be blocked if it occurs more frequently than this
+		trfc  		: time := 63 ns 	-- refresh cycle time
 
 		);
 	port(
@@ -29,16 +42,15 @@ entity top is
 
 		-- sdram interface
 		sdram_clk_o			:  out	std_logic;
-		sdram_DQ_io			:	inout std_logic_vector(15 downto 0);
-		sdram_A_o			:	out	std_logic_vector(12 downto 0); 
-		sdram_BS_o			:  out 	std_logic_vector(1 downto 0); 
+		sdram_DQ_io			:	inout std_logic_vector((2**LANEBITS)*8-1 downto 0);
+		sdram_A_o			:	out	std_logic_vector(maximum(COLBITS, ROWBITS)-1 downto 0); 
+		sdram_BS_o			:  out 	std_logic_vector(maximum(BANKBITS-1, 0) downto 0); 
 		sdram_CKE_o			:	out	std_logic;
 		sdram_nCS_o			:	out	std_logic;
 		sdram_nRAS_o		:	out	std_logic;
 		sdram_nCAS_o		:	out	std_logic;
 		sdram_nWE_o			:	out	std_logic;
-		sdram_DQM_o			:	out	std_logic_vector(1 downto 0)
-
+		sdram_DQM_o			:	out	std_logic_vector(2 ** LANEBITS - 1 downto 0)
 
 	);
 end top;
@@ -300,7 +312,16 @@ begin
 	generic map(
 		SIM				=> SIM,
 		CLOCKSPEED		=> CLOCKSPEED,
-		T_CAS_EXTRA		=> T_CAS_EXTRA
+		T_CAS_EXTRA	=> T_CAS_EXTRA,
+		LANEBITS		=> LANEBITS,
+		BANKBITS		=> BANKBITS,
+		ROWBITS		=> ROWBITS,
+		COLBITS		=> COLBITS,
+		trp			=> trp,
+		trcd			=> trcd,
+		trc			=> trc,
+		trfsh			=> trfsh,
+		trfc			=> trfc
 	)
 	port map (
 
