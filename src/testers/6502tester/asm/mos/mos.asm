@@ -1,11 +1,11 @@
 
-HW_PORTA		:=	$C000		; control port
+HW_PORTA	:=	$C000		; control port
 HW_UART_DAT	:=	$D000		; UART DATA
 HW_UART_STAT	:=	$D001		; UART STATUS
-HW_DEBUG		:=	$E000		; 2xLED 7 segment display
+HW_DEBUG	:=	$E000		; 2xLED 7 segment display
 
 ; Clock		Best phase	Extra CAS	ODIV	Phase#	cyc_i to ack
-; 48 MHz		~90		N		25	$3C	104ns
+; 48 MHz	~90		N		25	$3C	104ns
 ; 100 MHz	~219		Y		8	$27	70ns
 ; 125 MHz	~180		Y		8	$1F	56ns
 
@@ -15,8 +15,8 @@ BEST_PHASE	:=	$1F		; second part of tests run at this phase
 		.zeropage
 zp_strptr:	.res 	2
 zp_phase:	.res	1
-zp_tmp1:		.res	1
-zp_tmp2:		.res	1
+zp_tmp1:	.res	1
+zp_tmp2:	.res	1
 		.pc02
 		
 
@@ -29,7 +29,7 @@ zp_tmp2:		.res	1
 
 		.code
 
-str_boo:		.byte	"START",13,10,0
+str_boo:	.byte	"START",13,10,0
 str_badp1:	.byte	"No RAM in page 1",13,10,0
 str_badp0:	.byte	"No RAM in page 0",13,10,0
 
@@ -287,26 +287,24 @@ wl1:		jsr	delay
 
 
 	.proc	printHexA
-	pha
-	lsr	A
-	lsr	A
-	lsr	A
-	lsr	A
-	jsr	@nyb
-	pla
-	pha
-	jsr	@nyb
-	pla
-	rts
-@nyb:	and	#$F
-	ora	#'0'
-	cmp	#$3A
-	bcc	@s
-	adc	#'A'-$3A-1
-@s:	jsr	printA
-	rts
-
-
+		pha
+		lsr	A
+		lsr	A
+		lsr	A
+		lsr	A
+		jsr	@nyb
+		pla
+		pha
+		jsr	@nyb
+		pla
+		rts
+@nyb:		and	#$F
+		ora	#'0'
+		cmp	#$3A
+		bcc	@s
+		adc	#'A'-$3A-1
+@s:		jsr	printA
+		rts
 	.endproc
 
 
