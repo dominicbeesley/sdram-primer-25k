@@ -5,7 +5,7 @@
 --Part Number: GW2AR-LV18QN88C8/I7
 --Device: GW2AR-18
 --Device Version: C
---Created Time: Tue Feb  4 12:59:55 2025
+--Created Time: Tue Feb  4 14:58:09 2025
 
 --Change the instance name and port connections to the signal names
 ----------Copy here to design--------
@@ -16,7 +16,10 @@ component pll1
         lock: out std_logic;
         clkoutp: out std_logic;
         reset: in std_logic;
-        clkin: in std_logic
+        clkin: in std_logic;
+        psda: in std_logic_vector(3 downto 0);
+        dutyda: in std_logic_vector(3 downto 0);
+        fdly: in std_logic_vector(3 downto 0)
     );
 end component;
 
@@ -26,7 +29,10 @@ your_instance_name: pll1
         lock => lock,
         clkoutp => clkoutp,
         reset => reset,
-        clkin => clkin
+        clkin => clkin,
+        psda => psda,
+        dutyda => dutyda,
+        fdly => fdly
     );
 
 ----------Copy end-------------------

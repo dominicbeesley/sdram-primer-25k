@@ -120,6 +120,8 @@ architecture rtl of top is
 	signal	r_pll_reset_prev		:	std_logic	:= '0';
 	signal	r_pll_reset_ctr		:	unsigned(1 downto 0) := (others => '0');
 
+	signal   r_phase					:  std_logic_vector(3 downto 0) := "1011";
+
 begin
 
 	p_rom:process(i_fbsyscon)
@@ -341,6 +343,17 @@ begin
 
 	end process;
 
+	p_phase_update:process(clk_27_i, rst_i)
+	begin
+		if rst_i = '1' then
+			r_phase <= "1011";
+		elsif rising_edge(clk_27_i) then
+			if i_porta_o_bits(2) = '1' then
+				r_phase <= i_porta_o_bits(7 downto 4);
+			end if;
+		end if;
+	end process;
+
 	e_pll1: entity work.pll1
    port map (
    	lock => i_lock_pll,
@@ -348,7 +361,11 @@ begin
    	--reset => '0',
    	clkout => i_clk_pll,
    	clkoutp => i_clk_pll_p,
-   	clkin => clk_27_i
+   	clkin => clk_27_i,
+      psda => r_phase,
+      dutyda => "1000",
+      fdly => "0000"
+
 	);
 
 

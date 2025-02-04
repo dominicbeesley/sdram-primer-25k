@@ -4,13 +4,8 @@ HW_UART_DAT	:=	$D000		; UART DATA
 HW_UART_STAT	:=	$D001		; UART STATUS
 HW_DEBUG	:=	$E000		; 2xLED 7 segment display
 
-; Clock		Best phase	Extra CAS	ODIV	Phase#	cyc_i to ack
-; 48 MHz	~90		N		25	$3C	104ns
-; 100 MHz	~219		Y		8	$27	70ns
-; 125 MHz	~180		Y		8	$1F	56ns
-
 		
-BEST_PHASE	:=	$1F		; second part of tests run at this phase
+BEST_PHASE	:=	4		; second part of tests run at this phase
 
 		.zeropage
 zp_strptr:	.res 	2
@@ -127,7 +122,11 @@ reset:		sei
 
 		lda	#0
 		sta	zp_phase
-outer_loop:	lda	zp_phase
+outer_loop:	
+		lda	zp_phase
+		jsr	phaseSet
+		
+		lda	zp_phase
 		sta	HW_DEBUG
 		jsr	printHexA
 		lda	#' '
@@ -151,9 +150,9 @@ outer_loop:	lda	zp_phase
 		jsr	printI
 		.byte	13,10,0
 
-		jsr	phaseNudge
-
 		inc	zp_phase
+		lda	zp_phase
+		cmp	#$10
 		bne	outer_loop
 
 		jsr	printI
@@ -164,7 +163,7 @@ outer_loop:	lda	zp_phase
 		.byte	13,10,0
 
 		ldx	#BEST_PHASE
-nn1:		jsr	phaseNudge
+nn1:		jsr	phaseSet
 		dex
 		bne	nn1
 
@@ -180,7 +179,7 @@ ss1:		sta	$2000,X
 	
 h:
 		jsr	printI
-		.byte 13,10,27,"[2J",27,"[HChecking...",13,10,0
+		.byte "Checking...",13,10,0
 
 		ldy	#$A5
 		ldx	#0
@@ -196,6 +195,25 @@ cc1:		tya
 		jmp	h
 
 str_test:	.byte $A5,$5A,$BE,$EF,$11,$22,33,$44
+
+
+	.proc	phaseSet
+
+		pha
+		rol	A
+		rol	A
+		rol	A
+		rol	A
+		and	#$F0
+		ora	#$04
+		sta	HW_PORTA
+		and	#$F0
+		sta	HW_PORTA
+		pla
+		rts
+
+	.endproc
+
 
 	.proc    long_wait
 		jsr	printI
@@ -222,19 +240,6 @@ wl1:		jsr	delay
 
 
 
-	.proc	phaseNudge
-		pha
-		; bump phase
-		lda	#5		; reset and nudge phase
-		sta	HW_PORTA		
-		lda	#0
-		sta	HW_PORTA		
-
-		jsr	delay
-
-		pla
-		rts
-	.endproc	
 
 	.proc	delay
 		phx
