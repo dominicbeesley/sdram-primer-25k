@@ -119,7 +119,7 @@ architecture rtl of sdramctl is
 	-- data read on bus
 	constant TIX_RD_DAT	: natural := T_RCD + T_CAS + T_CAS_EXTRA - 1;
 	-- read finished go back to idle state with sufficient time for auto-precharge to finish
-	constant TIX_RD_FIN  : natural := maximum(TIX_RD_DAT, TIX_RD_DAT + T_RP - 3);
+	constant TIX_RD_FIN  : natural := maximum(TIX_RD_DAT, TIX_RD_DAT + T_RP - 2);
 	-- write finished go back to idle with sufficient time for auto-precharge to finish
 	constant TIX_WR_FIN	: natural := maximum(TIX_RW_CMD, T_RCD + T_WR + T_RP - 1);
 	-- refresh precharge start
