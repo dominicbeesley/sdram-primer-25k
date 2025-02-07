@@ -125,7 +125,7 @@ architecture rtl of sdramctl is
 	-- refresh precharge start
 	constant TIX_REF_PRE : natural := T_RCD + T_CAS + 1 - 1;
 	-- refresh finishing go back to idle with sufficient time for precharge to finish
-	constant TIX_REF_FIN : natural := T_RCD + T_CAS + 1 + T_RP - 3
+	constant TIX_REF_FIN : natural := T_RCD + T_CAS + 1 + T_RP - 3;
 
 
 	constant B_DQM_HI 	: integer := LANEBITS - 1;	-- maybe < 0
