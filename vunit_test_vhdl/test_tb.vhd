@@ -72,10 +72,18 @@ architecture rtl of test_tb is
 	signal i_ctl_D_rd			:	std_logic_vector(7 downto 0);
 	signal i_ctl_ack			:	std_logic;
 	signal i_ctl_rfsh			:  std_logic;
+	signal i_ctl_manrfsh		:  std_logic;
 
 
 	constant t_PER_lag : time := (1000000 us / FREQ) * (PHASE / 360.0);
 
+	constant B_DQM_HI 	: integer := LANEBITS - 1;	-- maybe < 0
+	constant B_COL_LO 	: natural := B_DQM_HI + 1;
+	constant B_COL_HI 	: natural := B_COL_LO + COLBITS - 1;
+	constant B_ROW_LO 	: natural := B_COL_HI + 1;
+	constant B_ROW_HI 	: natural := B_ROW_LO + ROWBITS - 1;
+	constant B_BANK_LO 	: natural := B_ROW_HI + 1;
+	constant B_BANK_HI 	: natural := B_BANK_LO + BANKBITS - 1;
 
 begin
 	p_clk:process
@@ -219,6 +227,30 @@ begin
 		return std_logic_vector(to_unsigned(a, i_ctl_a'length));
 	end function ADDR;
 
+	-- each incrementing a will be a new row
+	FUNCTION ADDR_R(a:integer) return std_logic_vector is	
+	variable R:integer;
+	variable ret:std_logic_vector(i_ctl_A'range);
+	begin
+		R := a MOD 2**ROWBITS;
+		ret := (others => '0');
+		ret(B_ROW_HI downto B_ROW_LO) := std_logic_vector(to_unsigned(R, ROWBITS));
+		return ret;
+	end function ADDR_R;
+
+	-- each incrementing a will go bank then row, for testing refresh
+	FUNCTION ADDR_BR(a:integer) return std_logic_vector is	
+	variable B:integer;
+	variable R:integer;
+	variable ret:std_logic_vector(i_ctl_A'range);
+	begin
+		B := a MOD 2**BANKBITS;
+		R := (a / 2**BANKBITS) MOD 2**ROWBITS;
+		ret := (others => '0');
+		ret(B_BANK_HI downto B_BANK_LO) := std_logic_vector(to_unsigned(B, BANKBITS));
+		ret(B_ROW_HI downto B_ROW_LO) := std_logic_vector(to_unsigned(R, ROWBITS));
+		return ret;
+	end function ADDR_BR;
 
 	begin
 
@@ -303,6 +335,55 @@ begin
 				END LOOP;
 
 				wait for 1 us;
+			elsif run("refresh_man_banks") then
+
+				DO_INIT;
+
+				i_ctl_manrfsh <= '1';
+				i_ctl_cyc <= '1';
+				i_ctl_A <= ADDR(0);
+
+				wait until rising_edge(i_clk);
+
+				for I in 1 to 256 loop
+
+					while i_ctl_stall /= '0' loop
+						wait until rising_edge(i_clk);
+					end loop;
+
+					i_ctl_A <= ADDR_BR(I);
+
+					wait until rising_edge(i_clk);
+					
+				end loop;
+
+				i_ctl_manrfsh <= '0';
+				i_ctl_cyc <= '0';
+
+			elsif run("refresh_man_rows") then
+
+				DO_INIT;
+
+				i_ctl_manrfsh <= '1';
+				i_ctl_cyc <= '1';
+				i_ctl_A <= ADDR(0);
+
+				wait until rising_edge(i_clk);
+
+				for I in 1 to 256 loop
+
+					while i_ctl_stall /= '0' loop
+						wait until rising_edge(i_clk);
+					end loop;
+
+					i_ctl_A <= ADDR_R(I);
+
+					wait until rising_edge(i_clk);
+					
+				end loop;
+
+				i_ctl_manrfsh <= '0';
+				i_ctl_cyc <= '0';
 
 			end if;
 
@@ -345,6 +426,7 @@ begin
 		sdram_DQM_o		=> i_sdram_DQM,
 
 		ctl_rfsh_i		=> i_ctl_rfsh,
+		ctl_manrfsh_i	=> i_ctl_manrfsh,
 		ctl_reset_i		=> '0',
 		ctl_stall_o		=> i_ctl_stall,
 		ctl_cyc_i		=> i_ctl_cyc,

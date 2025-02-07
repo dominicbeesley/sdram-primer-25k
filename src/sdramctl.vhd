@@ -71,7 +71,8 @@ entity sdramctl is
 
 		-- Address laid out as bank, row, column, byte lanes from high to low
 
-		ctl_rfsh_i			:	in		std_logic;
+		ctl_rfsh_i			:	in		std_logic	:= '0';		-- do an auto-refresh if one is pending (>trfsh since last)
+		ctl_manrfsh_i		:  in    std_logic   := '0';		-- do a "manual" refresh by opening the specified bank/row and then pre-charging
 		ctl_reset_i			:	in		std_logic;
 
 		ctl_stall_o			:	out	std_logic;
@@ -99,14 +100,33 @@ architecture rtl of sdramctl is
 		return r;
 	end function;
 
+	-- cycle count equivalents of generics
 	constant T_RP 	: natural := CLOCKS(trp);		-- PRECHARGE cycles
 	constant T_RC 	: natural := CLOCKS(trc);		-- ACTIVE to ACTIVE cycles
 	constant T_RCD : natural := CLOCKS(trcd);		-- ACTIVE to READ/WRITE cycles
+	constant T_RFSH: natural := CLOCKS(trfsh);
+	constant T_RFC : natural := CLOCKS(trfc);
+
+	-- other cycle counts
 	constant T_RSC	: natural := 2;					-- ? TODO: change to tMRD and get rid of "after"
 	constant T_CAS	: natural := 2;
-	constant T_RFSH: natural := CLOCKS(trfsh);
 	constant T_WR	: natural := 2;
-	constant T_RFC : natural := CLOCKS(trfc);
+
+	-- derived cycle indexes
+	-- ---------------------
+	-- wait for activate
+	constant TIX_RW_CMD 	: natural := T_RCD-1;
+	-- data read on bus
+	constant TIX_RD_DAT	: natural := T_RCD + T_CAS + T_CAS_EXTRA - 1;
+	-- read finished go back to idle state with sufficient time for auto-precharge to finish
+	constant TIX_RD_FIN  : natural := maximum(TIX_RD_DAT, TIX_RD_DAT + T_RP - 3);
+	-- write finished go back to idle with sufficient time for auto-precharge to finish
+	constant TIX_WR_FIN	: natural := maximum(TIX_RW_CMD, T_RCD + T_WR + T_RP - 1);
+	-- refresh precharge start
+	constant TIX_REF_PRE : natural := T_RCD + T_CAS + 1 - 1;
+	-- refresh finishing go back to idle with sufficient time for precharge to finish
+	constant TIX_REF_FIN : natural := T_RCD + T_CAS + 1 + T_RP - 3
+
 
 	constant B_DQM_HI 	: integer := LANEBITS - 1;	-- maybe < 0
 	constant B_COL_LO 	: natural := B_DQM_HI + 1;
@@ -136,7 +156,8 @@ architecture rtl of sdramctl is
 	type t_run_state is (
 		start,				-- hold stall for an extra cycle while start
 		idle,
-		refresh,
+		refresh_auto,
+		refresh_man,
 		read,
 		write
 	);
@@ -327,40 +348,39 @@ begin
 								sdram_BS_o <= ctl_A_i(B_BANK_HI downto B_BANK_LO);	
 								sdram_A_o <= (others => '0');
 								sdram_A_o(ROWBITS-1 downto 0)  <= ctl_A_i(B_ROW_HI downto B_ROW_LO);
-								if ctl_we_i = '0' then
+								if ctl_manrfsh_i = '1' then
+									r_run_state <= refresh_man;
+								elsif ctl_we_i = '0' then
 									r_run_state <= read;
 								else
 									r_run_state <= write;
 									r_D_wr_latched <= ctl_D_wr_i;								
 									ctl_ack_o <= '1';
-								end if;
+								end if;						
 							elsif r_rfshctr(r_rfshctr'high) = '1' and ctl_rfsh_i = '1' then
 								r_cmd <= cmd_autorefresh;
 								sdram_A_o(10) <= '1';
 								sdram_BS_o <= (others => '0');
 								RESET_RFSH;		
-								r_run_state <= refresh;					
+								r_run_state <= refresh_auto;					
 							end if;
 						when read =>
-							if r_cycle(T_RCD-1) = '1' then
+							if r_cycle(TIX_RW_CMD) = '1' then
 								r_cmd <= cmd_read;
 								sdram_A_o <= (others => '0');
 								sdram_A_o(COLBITS-1 downto 0) <= r_A_latched(B_COL_HI downto B_COL_LO);
 								sdram_A_o(10) <= '1'; -- auto precharge
 								sdram_DQM_o <= (others => '0');
 							end if;
-							-- need +1 below to allow for routing delays? it seems to only work at > 100MHz 
-							if r_cycle(T_RCD + T_CAS + T_CAS_EXTRA - 1) = '1' then
-								if T_RP <= 2 then
-									r_run_state <= idle;
-								end if;
+							if r_cycle(TIX_RD_DAT) = '1' then
 								ctl_ack_o <= '1';
 								ctl_D_rd_o <= DQSLICE(r_A_latched, sdram_DQ_io);
-							elsif r_cycle(T_RCD + T_CAS + T_CAS_EXTRA + T_RP - 3) = '1' then
+							end if;
+							if r_cycle(TIX_RD_FIN) = '1' then
 								r_run_state <= idle;
 							end if;
 						when write =>
-							if r_cycle(T_RCD - 1) = '1' then
+							if r_cycle(TIX_RW_CMD) = '1' then
 								r_cmd <= cmd_write;
 								sdram_A_o <= (others => '0');
 								sdram_A_o(COLBITS-1 downto 0) <= r_A_latched(B_COL_HI downto B_COL_LO);
@@ -368,10 +388,16 @@ begin
 								sdram_DQ_io <= DQREP(r_D_wr_latched);
 								sdram_DQM_o <= DQM(r_A_latched);
 							end if;
-							if r_cycle(T_RCD + T_WR + T_RP - 1) = '1' then
+							if r_cycle(TIX_WR_FIN) = '1' then
 								r_run_state <= idle;
 							end if;
-						when refresh =>
+						when refresh_man =>
+							if r_cycle(TIX_REF_PRE) = '1' then
+								r_cmd <= cmd_precharge;
+							elsif r_cycle(TIX_REF_FIN) = '1' then
+								r_run_state <= idle;
+							end if;
+						when refresh_auto =>
 							if r_cycle(T_RFC) = '1' then
 								RESET_CYCLE;
 								r_run_state <= idle;

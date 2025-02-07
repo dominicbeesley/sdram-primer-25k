@@ -56,6 +56,9 @@ architecture rtl of sdram_wrap is
 begin
 
    e_dut:entity work.mt48lc4m32b2 
+    GENERIC MAP (
+      SeverityMode => Error
+      )
     PORT MAP (
         BA0             => Bs(0),
         BA1             => Bs(1),
