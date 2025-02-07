@@ -121,11 +121,11 @@ architecture rtl of sdramctl is
 	-- read finished go back to idle state with sufficient time for auto-precharge to finish
 	constant TIX_RD_FIN  : natural := maximum(TIX_RD_DAT, TIX_RD_DAT + T_RP - 2);
 	-- write finished go back to idle with sufficient time for auto-precharge to finish
-	constant TIX_WR_FIN	: natural := maximum(TIX_RW_CMD, T_RCD + T_WR + T_RP - 1);
+	constant TIX_WR_FIN	: natural := maximum(TIX_RW_CMD, T_RCD + T_WR + T_RP - 3);
 	-- refresh precharge start
 	constant TIX_REF_PRE : natural := T_RCD + T_CAS + 1 - 1;
 	-- refresh finishing go back to idle with sufficient time for precharge to finish
-	constant TIX_REF_FIN : natural := T_RCD + T_CAS + 1 + T_RP - 3;
+	constant TIX_REF_FIN : natural := T_RCD + T_CAS + 1 + T_RP - 2;
 
 
 	constant B_DQM_HI 	: integer := LANEBITS - 1;	-- maybe < 0

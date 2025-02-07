@@ -335,6 +335,46 @@ begin
 				END LOOP;
 
 				wait for 1 us;
+			elsif run("backtoback-write") then
+
+				DO_INIT;
+
+				i_ctl_rfsh	 <= '1';
+
+				wait until rising_edge(i_clk);
+				i_ctl_cyc 	<= '1';
+				i_ctl_A 		<= ADDR(0);
+				i_ctl_we  	<= '1';
+				i_ctl_D_wr  <= (others => '0');
+
+				wait until rising_edge(i_clk);
+				while i_ctl_stall /= '0' loop
+					wait until rising_edge(i_clk);
+				end loop;
+
+				FOR I in 1 TO 255 loop
+					i_ctl_A <= ADDR(I * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)); -- preload next address
+					i_ctl_D_wr <= std_logic_vector(to_unsigned(I, 8));
+					wait until rising_edge(i_clk);
+					while i_ctl_stall /= '0' loop
+						wait until rising_edge(i_clk);
+					end loop;
+
+				END LOOP;
+
+				while i_ctl_stall /= '0' loop
+					wait until rising_edge(i_clk);
+				end loop;
+
+				i_ctl_cyc 	<= '0';
+				i_ctl_A 		<= ADDR(0);
+				i_ctl_we  	<= '0';
+
+				FOR I in 0 TO 255 loop
+					DO_READ_BYTE_C(ADDR(I * 2**(LANEBITS+ROWBITS+COLBITS+BANKBITS - 8)), std_logic_vector(to_unsigned(I, 8)));
+				END LOOP;
+
+				wait for 1 us;
 			elsif run("refresh_man_banks") then
 
 				DO_INIT;
