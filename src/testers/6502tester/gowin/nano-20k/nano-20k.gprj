@@ -5,23 +5,23 @@
     <Version>5</Version>
     <Device name="GW2AR-18C" pn="GW2AR-LV18QN88C8/I7">gw2ar18c-000</Device>
     <FileList>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/common.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fb_null.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/library/mine/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/src/sdramctl.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/common.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_arbiter_prior.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_arbiter_roundrobin.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_intcon_one_to_many.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_intcon_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_null.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../sdramctl.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_rpll/gowin_rpll.vhd" type="file.vhdl" enable="1"/>
         <File path="src/top.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/src/testers/6502tester/shared/R65Cx2.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/src/testers/6502tester/shared/clockreg.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/src/testers/6502tester/shared/fb_65c02.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/src/testers/6502tester/shared/fb_port_io.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/src/testers/6502tester/shared/fb_sdram.vhd" type="file.vhdl" enable="1"/>
-        <File path="C:/Users/Dominic/Documents/GitHub/sdram-primer-25k/src/testers/6502tester/shared/fb_uart.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/R65Cx2.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/clockreg.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/fb_65c02.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/fb_port_io.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/fb_sdram.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../shared/fb_uart.vhd" type="file.vhdl" enable="1"/>
         <File path="src/nano-20k.cst" type="file.cst" enable="1"/>
         <File path="src/test6502.sdc" type="file.sdc" enable="1"/>
     </FileList>

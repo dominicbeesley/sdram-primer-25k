@@ -13,8 +13,8 @@
         <File path="../../../../../library/mine/fishbone/fb_null.vhd" type="file.vhdl" enable="1"/>
         <File path="../../../../../library/mine/fishbone/fb_syscon.vhd" type="file.vhdl" enable="1"/>
         <File path="../../../../../library/mine/fishbone/fishbone_pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="../../../../../library/mine/clockreg.vhd" type="file.vhdl" enable="1"/>
         <File path="../../shared/R65Cx2.vhd" type="file.vhdl" enable="1"/>
-        <File path="../../shared/clockreg.vhd" type="file.vhdl" enable="1"/>
         <File path="../../shared/fb_65c02.vhd" type="file.vhdl" enable="1"/>
         <File path="../../shared/fb_port_io.vhd" type="file.vhdl" enable="1"/>
         <File path="../../shared/fb_sdram.vhd" type="file.vhdl" enable="1"/>

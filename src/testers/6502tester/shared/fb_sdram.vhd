@@ -90,7 +90,9 @@ entity fb_sdram is
 		sdram_nWE_o			:	out	std_logic;
 		sdram_DQM_o			:	out	std_logic_vector(2 ** LANEBITS - 1 downto 0);
 
-		ctl_reset_i			:	in		std_logic
+		ctl_reset_i			:	in		std_logic;
+
+		man_refresh_i		:  in    std_logic		-- in manual refresh mode this controller will refresh every 1 us with incrementing row then bank
 
 
 	);
@@ -105,6 +107,8 @@ architecture rtl of fb_sdram is
 	signal 	i_ctl_D_wr			:	std_logic_vector(7 downto 0);
 	signal 	i_ctl_D_rd			:	std_logic_vector(7 downto 0);
 	signal 	i_ctl_ack			:	std_logic;
+	signal   i_ctl_rfsh			:  std_logic;
+	signal   i_ctl_manrfsh		:  std_logic;
 
 	type t_state is (idle, rd, wr, wr_wait);
 	signal 	r_state				: 	t_state;
@@ -195,7 +199,8 @@ begin
 		end if;
 	end process;
 
-
+	i_ctl_rfsh <= not man_refresh_i;
+	i_ctl_manrfsh <= '0';
 
 	e_sdramctl:entity work.sdramctl
 	generic map (
@@ -233,7 +238,8 @@ begin
 
 		-- cpu interface
 
-		ctl_rfsh_i			=> '1',
+		ctl_rfsh_i			=> i_ctl_rfsh,
+		ctl_manrfsh_i		=> i_ctl_manrfsh,
 		ctl_reset_i			=> ctl_reset_i,
 		ctl_stall_o			=> i_ctl_stall,
 		ctl_cyc_i			=> i_ctl_cyc,

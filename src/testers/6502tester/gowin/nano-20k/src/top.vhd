@@ -320,7 +320,10 @@ begin
 		sdram_nWE_o		=> O_sdram_wen_n,
 		sdram_DQM_o		=> O_sdram_dqm,
 
-		ctl_reset_i		=> i_porta_o_bits(2)
+		ctl_reset_i		=> i_porta_o_bits(2),
+
+		man_refresh_i  => '1'
+
 	);
 
 	O_sdram_clk		<= i_clk_pll_p;

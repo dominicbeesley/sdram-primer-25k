@@ -351,7 +351,9 @@ begin
 		sdram_nWE_o		=> sdram_nWE_o,
 		sdram_DQM_o		=> sdram_DQM_o,
 
-		ctl_reset_i		=> i_porta_o_bits(2)
+		ctl_reset_i		=> i_porta_o_bits(2),
+
+		man_refresh_i  => '1'
 	);
 
 	sdram_clk_o		<= i_clk_pll_p;

@@ -202,9 +202,9 @@ str_test:	.byte $A5,$5A,$BE,$EF,$11,$22,33,$44
 		.byte	13,10,"Wait...",0
 
 
-		lda	#20
+		lda	#200
 		sta	zp_tmp2		
-wl2:		lda	#20
+wl2:		lda	#100
 		sta	zp_tmp1
 wl1:		jsr	delay
 
